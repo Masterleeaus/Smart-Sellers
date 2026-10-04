@@ -10,6 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ChatbotStoreRequest extends FormRequest
 {
@@ -44,13 +45,34 @@ class ChatbotStoreRequest extends FormRequest
             'review_responses'              => ['sometimes', 'nullable', 'array', 'max:5'],
             'review_responses.*'            => ['nullable', 'string'],
             'is_shop'                       => ['sometimes', 'boolean'],
-            'shop_source'					              => ['sometimes', 'nullable', 'string'],
+            'shop_source'                   => ['sometimes', 'nullable', 'string'],
             'shop_features'                 => ['sometimes', 'nullable', 'array'],
-            'shopify_domain'				            => ['sometimes', 'nullable', 'string'],
-            'shopify_access_token'			       => ['sometimes', 'nullable', 'string'],
-            'woocommerce_domain'			         => ['sometimes', 'nullable', 'string'],
+            'shopify_domain'                => ['sometimes', 'nullable', 'string'],
+            'shopify_access_token'          => ['sometimes', 'nullable', 'string'],
+            'woocommerce_domain'            => ['sometimes', 'nullable', 'string'],
             'woocommerce_consumer_key'      => ['sometimes', 'nullable', 'string'],
             'woocommerce_consumer_secret'   => ['sometimes', 'nullable', 'string'],
+            'titan_template'                => ['sometimes', 'nullable', 'string', 'max:80'],
+            'shell_builder_config'          => ['sometimes', 'nullable', 'array'],
+            'shell_builder_config.device'   => ['sometimes', 'string', Rule::in(['mobile', 'tablet', 'desktop'])],
+            'shell_builder_config.role'     => ['sometimes', 'string', 'max:80'],
+            'shell_builder_config.state'    => ['sometimes', 'string', Rule::in(['online', 'offline', 'syncing', 'conflict', 'empty', 'populated'])],
+            'shell_builder_config.theme'    => ['sometimes', 'string', Rule::in(['light', 'dark', 'system'])],
+            'shell_builder_config.primary'  => ['sometimes', 'array', 'max:6'],
+            'shell_builder_config.primary.*.id' => ['required_with:shell_builder_config.primary', 'string', 'max:80'],
+            'shell_builder_config.primary.*.label' => ['required_with:shell_builder_config.primary', 'string', 'max:80'],
+            'shell_builder_config.primary.*.icon' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'shell_builder_config.primary.*.offline' => ['sometimes', 'boolean'],
+            'shell_builder_config.drawer'   => ['sometimes', 'array', 'max:40'],
+            'shell_builder_config.drawer.*.id' => ['required_with:shell_builder_config.drawer', 'string', 'max:80'],
+            'shell_builder_config.drawer.*.label' => ['required_with:shell_builder_config.drawer', 'string', 'max:80'],
+            'shell_builder_config.settings_sections' => ['sometimes', 'array', 'max:20'],
+            'shell_builder_config.settings_sections.*' => ['string', 'max:80'],
+            'shell_builder_config.home_widgets' => ['sometimes', 'array', 'max:20'],
+            'shell_builder_config.home_widgets.*' => ['string', 'max:80'],
+            'shell_builder_config.workspace_templates' => ['sometimes', 'array', 'max:12'],
+            'shell_builder_config.workspace_templates.*' => ['string', 'max:80'],
+            'shell_builder_config.default_view' => ['sometimes', 'nullable', 'string', 'max:80'],
         ];
     }
 

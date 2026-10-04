@@ -1,30 +1,85 @@
 @php
-    $titanBuilderSchemas = \App\Extensions\Chatbot\System\TitanShell\TemplateSchema::all();
+    $titanBuilderSchemas = \App\Extensions\Chatbot\System\TitanShell\TemplateSchema::allTemplateSchemas();
+    $titanPlatformSlugs = \App\Extensions\Chatbot\System\TitanShell\PlatformApplicationRegistry::slugs();
+    $titanVerticalTemplates = \App\Extensions\Chatbot\System\Titan\TitanRegistry::verticals();
+    $titanWorkspaceTemplates = \App\Extensions\Chatbot\System\Titan\TitanRegistry::workspaces();
+    $verticalWorkspaceMap = [];
+    foreach ($titanVerticalTemplates as $verticalTemplate) {
+        $verticalWorkspaceMap[$verticalTemplate['slug']] = $verticalTemplate['workspaces'] ?? [];
+    }
     $titanRoles = ['customer', 'field-worker', 'cleaner', 'dispatcher', 'reception', 'manager', 'finance', 'quality', 'sales', 'administrator'];
     $allSettingsSections = ['ai-providers', 'privacy', 'device-security', 'offline-sync', 'workcore', 'permissions', 'notifications', 'channels', 'appearance', 'accessibility', 'diagnostics'];
 @endphp
 
 <section
     class="rounded-2xl border border-heading-foreground/10 bg-heading-background/40 p-4"
-    x-data='titanShellBuilder(@json($titanBuilderSchemas))'
+    x-data='titanShellBuilder(@json($titanBuilderSchemas), @json($verticalWorkspaceMap))'
 >
     <div class="mb-5 flex items-start justify-between gap-3">
         <div>
             <h3 class="text-sm font-semibold">@lang('App shell and navigation')</h3>
-            <p class="mt-1 text-2xs/5 opacity-60">@lang('Configure the operational links, drawer, settings policy and live preview for this Titan application.')</p>
+            <p class="mt-1 text-2xs/5 opacity-60">@lang('Choose a Titan app or business vertical, compose its WorkCore workspaces, then customise navigation and offline behaviour in the same shared shell.')</p>
         </div>
-        <span class="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">{{ count($titanBuilderSchemas) }} apps</span>
+        <span class="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">{{ count($titanVerticalTemplates) }} verticals</span>
     </div>
 
     <div class="grid gap-4">
         <label class="grid gap-1 text-2xs font-medium">
-            <span>@lang('Titan application')</span>
+            <span>@lang('Titan application or vertical')</span>
             <select class="rounded-lg border border-heading-foreground/10 bg-background px-3 py-2" x-model="selectedSlug" @change="selectTemplate(selectedSlug)">
-                <template x-for="item in schemas" :key="item.identity.slug">
-                    <option :value="item.identity.slug" x-text="item.identity.name"></option>
-                </template>
+                <optgroup label="{{ __('Titan platform apps') }}">
+                    @foreach($titanBuilderSchemas as $schema)
+                        @php($schemaSlug = (string) data_get($schema, 'identity.slug'))
+                        @if(in_array($schemaSlug, $titanPlatformSlugs, true))
+                            <option value="{{ $schemaSlug }}">{{ data_get($schema, 'identity.name', $schemaSlug) }}</option>
+                        @endif
+                    @endforeach
+                </optgroup>
+                <optgroup label="{{ __('Business verticals') }}">
+                    @foreach($titanBuilderSchemas as $schema)
+                        @php($schemaSlug = (string) data_get($schema, 'identity.slug'))
+                        @if(str_starts_with($schemaSlug, 'vertical-'))
+                            <option value="{{ $schemaSlug }}">{{ data_get($schema, 'identity.name', $schemaSlug) }}</option>
+                        @endif
+                    @endforeach
+                </optgroup>
+                <optgroup label="{{ __('WorkCore workspaces') }}">
+                    @foreach($titanBuilderSchemas as $schema)
+                        @php($schemaSlug = (string) data_get($schema, 'identity.slug'))
+                        @if(str_starts_with($schemaSlug, 'workspace-'))
+                            <option value="{{ $schemaSlug }}">{{ data_get($schema, 'identity.name', $schemaSlug) }}</option>
+                        @endif
+                    @endforeach
+                </optgroup>
             </select>
         </label>
+
+        <div
+            class="rounded-xl border border-heading-foreground/10 bg-background/50 p-3"
+            x-show="selectedSlug.startsWith('vertical-') || (config.workspace_templates || []).length"
+            x-cloak
+        >
+            <div class="mb-3">
+                <h4 class="text-xs font-semibold">@lang('WorkCore workspaces')</h4>
+                <p class="mt-1 text-[10px] leading-4 opacity-60">@lang('Verticals recommend reusable CRM, Jobs & Projects, Crew & Team and Finance workspaces. Turn off any workspace the business does not need without creating another WorkCore authority.')</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <template x-for="workspace in workspaceSchemas()" :key="workspace.identity.slug">
+                    <button
+                        type="button"
+                        class="rounded-lg border p-2 text-start transition"
+                        :class="(config.workspace_templates || []).includes(workspace.identity.slug) ? 'border-primary bg-primary/10 text-primary' : 'border-heading-foreground/10 bg-background'"
+                        @click="toggleWorkspace(workspace.identity.slug)"
+                    >
+                        <span class="block text-[10px] font-semibold" x-text="workspace.identity.name"></span>
+                        <span
+                            class="mt-1 block text-[9px] opacity-60"
+                            x-show="recommendedWorkspaces().includes(workspace.identity.slug)"
+                        >@lang('Recommended for this vertical')</span>
+                    </button>
+                </template>
+            </div>
+        </div>
 
         <div class="grid grid-cols-2 gap-3">
             <label class="grid gap-1 text-2xs font-medium">
