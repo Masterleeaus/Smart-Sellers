@@ -9,19 +9,17 @@ use Illuminate\Support\Collection;
 use RuntimeException;
 
 /**
- * Registry for legacy Titan templates plus composable vertical and workspace presets.
+ * Registry for legacy Titan templates plus composable vertical, functional and workspace presets.
  *
  * Canonical platform applications remain owned by PlatformApplicationRegistry.
- * This registry only supplies reusable template overlays for the shared shell.
+ * This registry supplies reusable template overlays for the shared Chatbot shell.
  */
 class TitanRegistry
 {
-    public const VERSION = '2.1.0';
+    public const VERSION = '2.2.0';
 
     protected static ?Collection $templates = null;
-
     protected static ?string $templatesPath = null;
-
     protected static ?string $cataloguesPath = null;
 
     public static function init(): void
@@ -53,7 +51,6 @@ class TitanRegistry
 
         foreach ($files->directories(static::$templatesPath) as $dir) {
             $configFile = $dir.'/config.json';
-
             if (! $files->exists($configFile)) {
                 continue;
             }
@@ -84,7 +81,6 @@ class TitanRegistry
                 if (! is_array($template)) {
                     throw new RuntimeException("Titan template catalogue entry must be an object: {$catalogueFile}");
                 }
-
                 static::register(static::normalise($template, $category));
             }
         }
@@ -94,11 +90,9 @@ class TitanRegistry
     protected static function decodeJson(string $json, string $path): array
     {
         $decoded = json_decode($json, true);
-
         if (! is_array($decoded)) {
             throw new RuntimeException("Invalid Titan template JSON: {$path}");
         }
-
         return $decoded;
     }
 
@@ -106,11 +100,9 @@ class TitanRegistry
     protected static function register(array $template): void
     {
         $slug = (string) $template['slug'];
-
         if (static::$templates?->has($slug)) {
             throw new RuntimeException("Duplicate Titan template slug: {$slug}");
         }
-
         static::$templates?->put($slug, $template);
     }
 
@@ -132,7 +124,10 @@ class TitanRegistry
         $template['features'] = array_values((array) ($template['features'] ?? []));
         $template['roles'] = array_values((array) ($template['roles'] ?? []));
         $template['workspaces'] = array_values((array) ($template['workspaces'] ?? []));
+        $template['functional_templates'] = array_values((array) ($template['functional_templates'] ?? []));
         $template['commerce_modes'] = array_values((array) ($template['commerce_modes'] ?? []));
+        $template['terminology'] = (array) ($template['terminology'] ?? []);
+        $template['role_presets'] = (array) ($template['role_presets'] ?? []);
         $template['workcore'] = (array) ($template['workcore'] ?? []);
         $template['offline'] = (array) ($template['offline'] ?? []);
         $template['chatbot'] = (array) ($template['chatbot'] ?? []);
@@ -145,7 +140,6 @@ class TitanRegistry
         if (! static::$templates) {
             static::init();
         }
-
         return static::$templates;
     }
 
@@ -187,6 +181,12 @@ class TitanRegistry
     }
 
     /** @return list<array<string,mixed>> */
+    public static function functional(): array
+    {
+        return static::summaries(static::byCategory('functional'));
+    }
+
+    /** @return list<array<string,mixed>> */
     public static function workspaces(): array
     {
         return static::summaries(static::byCategory('workspace'));
@@ -196,6 +196,66 @@ class TitanRegistry
     public static function legacy(): array
     {
         return static::summaries(static::byCategory('legacy-template'));
+    }
+
+    /**
+     * Resolve a vertical into the template stack that the shared shell should expose.
+     * A role preset can narrow the stack and choose the platform app without creating
+     * a separate runtime, database, outbox or WorkCore authority.
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function compose(string $verticalSlug, ?string $role = null): ?array
+    {
+        $vertical = static::get($verticalSlug);
+        if (! $vertical || ($vertical['category'] ?? null) !== 'vertical') {
+            return null;
+        }
+
+        $allTemplateSlugs = array_values((array) ($vertical['functional_templates'] ?? []));
+        $rolePresets = (array) ($vertical['role_presets'] ?? []);
+        $preset = $role !== null ? ($rolePresets[$role] ?? null) : null;
+
+        $selectedSlugs = is_array($preset)
+            ? array_values((array) ($preset['templates'] ?? $allTemplateSlugs))
+            : $allTemplateSlugs;
+
+        $defaultTemplate = is_array($preset)
+            ? (string) ($preset['default_template'] ?? ($selectedSlugs[0] ?? ''))
+            : (string) ($selectedSlugs[0] ?? '');
+
+        if ($defaultTemplate !== '' && ! in_array($defaultTemplate, $selectedSlugs, true)) {
+            array_unshift($selectedSlugs, $defaultTemplate);
+        }
+
+        $selectedSlugs = array_values(array_unique($selectedSlugs));
+        $templates = [];
+
+        foreach ($selectedSlugs as $templateSlug) {
+            $definition = static::get((string) $templateSlug);
+            if (! $definition || ! in_array($definition['category'] ?? null, ['functional', 'workspace'], true)) {
+                throw new RuntimeException(
+                    "Vertical {$verticalSlug} references unknown functional/workspace template: {$templateSlug}",
+                );
+            }
+            $templates[] = $definition;
+        }
+
+        return [
+            'vertical' => $verticalSlug,
+            'name' => $vertical['name'],
+            'role' => $role,
+            'platform_app' => is_array($preset)
+                ? (string) ($preset['platform_app'] ?? $vertical['platform_app'] ?? 'titan-zero')
+                : (string) ($vertical['platform_app'] ?? 'titan-zero'),
+            'default_template' => $defaultTemplate,
+            'template_slugs' => $selectedSlugs,
+            'templates' => $templates,
+            'terminology' => (array) ($vertical['terminology'] ?? []),
+            'role_presets' => $rolePresets,
+            'workcore' => (array) ($vertical['workcore'] ?? []),
+            'offline' => (array) ($vertical['offline'] ?? []),
+        ];
     }
 
     /** @return array<string,mixed>|null */
@@ -214,8 +274,19 @@ class TitanRegistry
     public static function getNavigation(string $slug): array
     {
         $template = static::get($slug);
-
         return (array) ($template['navigation'] ?? $template['schema']['navigation'] ?? []);
+    }
+
+    /** @return array<string,string> */
+    public static function getTerminology(string $slug): array
+    {
+        return (array) (static::get($slug)['terminology'] ?? []);
+    }
+
+    /** @return array<string,array<string,mixed>> */
+    public static function getRolePresets(string $slug): array
+    {
+        return (array) (static::get($slug)['role_presets'] ?? []);
     }
 
     /** @return list<string> */
@@ -239,7 +310,6 @@ class TitanRegistry
     public static function create(string $slug, array $config = []): ?TitanApp
     {
         $template = static::get($slug);
-
         return $template ? new TitanApp($slug, $template, $config) : null;
     }
 
@@ -268,7 +338,10 @@ class TitanRegistry
                     'order' => (int) ($config['order'] ?? 1000),
                     'platform_app' => $config['platform_app'] ?? null,
                     'workspaces' => array_values((array) ($config['workspaces'] ?? [])),
+                    'functional_templates' => array_values((array) ($config['functional_templates'] ?? [])),
                     'roles' => array_values((array) ($config['roles'] ?? [])),
+                    'role_presets' => (array) ($config['role_presets'] ?? []),
+                    'terminology' => (array) ($config['terminology'] ?? []),
                     'features' => array_values((array) ($config['features'] ?? [])),
                     'commerce_modes' => array_values((array) ($config['commerce_modes'] ?? [])),
                     'workcore_domains' => array_values((array) ($workcore['domains'] ?? [])),
