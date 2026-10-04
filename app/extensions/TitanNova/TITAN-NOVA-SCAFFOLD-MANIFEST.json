@@ -1,0 +1,11 @@
+{
+  "extension": "TitanNova",
+  "version": "3.0.0",
+  "architecture": "Original scheduling-engine folder roles retained; all domain names use Titan Nova",
+  "new_files_only_when_required": true,
+  "tables": [
+    "ext_titan_nova_agents",
+    "ext_titan_nova_tasks"
+  ],
+  "channel_model": "Generic channel delivery and execution"
+}

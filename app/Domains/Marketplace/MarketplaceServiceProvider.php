@@ -115,6 +115,7 @@ use App\Extensions\SocialMedia\System\SocialMediaServiceProvider;
 use App\Extensions\SocialMediaAgent\System\SocialMediaAgentServiceProvider;
 use App\Extensions\SocialMediaAutomation\System\SocialMediaAutomationServiceProvider;
 use App\Extensions\SpeechifyTTS\System\SpeechifyServiceProvider;
+use App\Extensions\TitanNova\System\TitanNovaServiceProvider;
 use App\Extensions\UGCCreator\System\UGCCreatorServiceProvider;
 use App\Extensions\UGCFactory\System\UGCFactoryServiceProvider;
 use App\Extensions\UrlToVideo\System\UrlToVideoServiceProvider;
@@ -236,6 +237,7 @@ class MarketplaceServiceProvider extends ServiceProvider
         'ai-chat-pro-entity-highlight'  => AiChatProEntityHighlightServiceProvider::class,
         'ai-chat-pro-highlight-to-ask'  => AiChatProHighlightToAskServiceProvider::class,
         'video-editor'					             => VideoEditorServiceProvider::class,
+        'titan-nova'                   => TitanNovaServiceProvider::class,
         'ugc-factory'                   => UGCFactoryServiceProvider::class,
         'ugc-creator'                   => UGCCreatorServiceProvider::class,
         'video-dubbing'                 => VideoDubbingServiceProvider::class,

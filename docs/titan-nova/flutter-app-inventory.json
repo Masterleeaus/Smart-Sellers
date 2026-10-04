@@ -1,0 +1,8 @@
+{
+  "workspace": "mobile apps",
+  "workspace_present": true,
+  "flutter_projects": [],
+  "pubspec_count": 0,
+  "status": "blocked",
+  "reason": "The mobile apps workspace exists, but no pubspec.yaml is committed."
+}

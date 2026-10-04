@@ -1,107 +1,95 @@
 {
   "name": "Titan Nova",
   "slug": "titan-nova",
-  "type": "hr-recruitment",
-  "version": "1.0.0",
-  "description": "HR and recruitment management, talent acquisition, and employee lifecycle",
-  "icon": "⭐",
-  "color": "#8b5cf6",
+  "type": "venture-builder",
+  "version": "3.0.0",
+  "description": "Evidence-led venture discovery, vertical design, simulation, pilot launch and continuous improvement for Titan Zero.",
+  "icon": "🧬",
+  "color": "#6d5dfc",
   "theme": {
-    "primary": "#8b5cf6",
-    "gradient": "linear-gradient(135deg, #8b5cf6, #7c3aed)"
+    "primary": "#6d5dfc",
+    "gradient": "linear-gradient(135deg, #6d5dfc, #4338ca)"
   },
   "wizard_steps": [
-    "Configure",
-    "Customize",
-    "Train",
-    "Deploy",
-    "Launch"
+    "Discover",
+    "Model",
+    "Simulate",
+    "Validate",
+    "Launch",
+    "Learn"
   ],
   "features": [
-    "lead-creation",
-    "lead-scoring",
-    "lead-qualification",
-    "lead-tracking",
-    "lead-assignment",
-    "lead-conversion",
-    "source-tracking",
-    "pipeline-management",
-    "lead-tagging",
-    "bulk-import",
-    "export",
-    "chatbot"
+    "opportunity-discovery",
+    "capability-isomorphism",
+    "idle-capacity-arbitrage",
+    "vertical-genome",
+    "workcore-simulation",
+    "monte-carlo-simulation",
+    "offer-design",
+    "unit-economics",
+    "anchor-account-validation",
+    "pilot-mission-control",
+    "curriculum-compilation",
+    "capability-passports",
+    "mission-ledger",
+    "model-council-gates",
+    "living-genome"
   ],
   "chatbot": {
-    "name": "Titan Sprout Assistant",
-    "role": "Lead management and sales pipeline",
-    "system_prompt": "You are a lead management assistant helping sales teams:\n- Create and track new leads\n- Score leads based on quality indicators\n- Qualify leads for sales team handoff\n- Track lead sources and conversion rates\n- Suggest next steps in the pipeline\n- Manage lead assignments\n\nAlways prioritize lead quality and conversion potential. Help the team focus on hot leads.",
+    "name": "Titan Nova Operator",
+    "role": "Venture discovery, validation and launch orchestrator",
+    "system_prompt": "You are the Titan Nova Operator. Turn evidence, business capabilities and market constraints into governed venture experiments. Preserve WorkCore as the operational system of record, require approval for consequential actions, record receipts, and clearly separate hypotheses from verified facts.",
     "suggested_prompts": [
-      "Create new lead",
-      "Score this lead",
-      "Qualify for sales",
-      "Convert to customer",
-      "Show pipeline",
-      "Assign leads",
-      "Track source performance"
+      "Find the strongest adjacent opportunity",
+      "Build a vertical launch genome",
+      "Simulate this business model",
+      "Design an anchor-customer pilot",
+      "Compile the training pathway",
+      "Show the next governed mission"
     ]
   },
-  "tier1_manager": "SalesManager",
+  "tier1_manager": "VentureLaunchManager",
   "tier2_specialists": [
-    "LeadGenerationSpecialist",
-    "LeadQualificationSpecialist"
+    "OpportunityResearchSpecialist",
+    "VerticalGenomeSpecialist",
+    "VentureSimulationSpecialist",
+    "PilotLaunchSpecialist"
   ],
   "tier3_actions": [
-    "CreateLeadAgent",
-    "UpdateLeadAgent",
-    "ScoreLeadAgent",
-    "QualifyLeadAgent",
-    "AssignLeadAgent",
-    "ConvertLeadToCustomerAgent",
-    "TrackLeadSourceAgent",
-    "BulkImportLeadsAgent"
+    "CollectEvidenceAgent",
+    "ScoreOpportunityAgent",
+    "CompileVerticalGenomeAgent",
+    "RunVentureSimulationAgent",
+    "CreateAnchorAccountMissionAgent",
+    "CreatePilotMissionAgent",
+    "RecordMissionReceiptAgent",
+    "UpdateLivingGenomeAgent"
   ],
   "database": {
     "tables": [
-      "leads",
-      "lead_sources",
-      "lead_scores",
-      "lead_qualifications",
-      "lead_conversions",
-      "lead_assignments"
-    ]
+      "ext_titan_nova_agents",
+      "ext_titan_nova_tasks"
+    ],
+    "authority": "Titan Nova owns venture hypotheses, experiments, missions and learning. WorkCore owns customers, bookings, jobs, workforce, invoices, payments and operational records."
   },
   "permissions": [
-    "lead:create",
-    "lead:read",
-    "lead:update",
-    "lead:delete",
-    "lead:score",
-    "lead:qualify",
-    "lead:assign",
-    "lead:convert",
-    "lead:export"
+    "titan-nova:view",
+    "titan-nova:create-mission",
+    "titan-nova:simulate",
+    "titan-nova:approve",
+    "titan-nova:execute",
+    "titan-nova:view-receipts",
+    "titan-nova:update-genome"
   ],
   "models": [
-    "Lead",
-    "LeadSource",
-    "LeadScore",
-    "LeadQualification",
-    "LeadConversion"
+    "TitanNovaAgent",
+    "TitanNovaTask"
   ],
   "settings": {
-    "scoring_weights": {
-      "engagement": 0.4,
-      "fit": 0.35,
-      "readiness": 0.25
-    },
-    "quality_tiers": [
-      { "name": "hot", "min_score": 80 },
-      { "name": "warm", "min_score": 60 },
-      { "name": "cool", "min_score": 40 },
-      { "name": "cold", "min_score": 0 }
-    ],
-    "auto_assignment": true,
-    "auto_scoring": true,
-    "notification_on_hot_lead": true
+    "approval_required_for_external_actions": true,
+    "workcore_is_operational_authority": true,
+    "record_action_receipts": true,
+    "simulation_before_launch": true,
+    "minimum_anchor_accounts": 1
   }
 }
