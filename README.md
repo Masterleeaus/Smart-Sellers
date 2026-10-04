@@ -2,156 +2,99 @@
 
 # Smart Sellers
 
-**The AI-powered commerce system that takes a seller's product line wherever customers discover, compare and buy.**
+**One governed commerce system for sellers who need to sell, operate, and support a catalogue across channels.**
 
-Smart Sellers gives a seller one source of truth for products, variants, prices, availability, orders and customer policies. Three coordinated AI roles use that shared commerce foundation to sell the catalogue, operate its sales channels and support customers.
+Smart Sellers gives a seller one source of truth for products, variants, prices, availability, orders, customer context, and policy. Three coordinated roles then use that shared foundation: a shopping assistant for customers, a commerce steward for seller operations, and a communications agent for post-purchase support.
 
-The product is designed for physical goods, digital products, services, hire and rentals, and bookable offerings. A seller can combine product sales with appointments, reservations, rental periods, deposits and extensions in one commerce operation.
+## The seller problem
 
-## Three AI roles for one seller
+Commerce becomes expensive to operate when the catalogue, marketplace listings, inventory, orders, and customer conversations drift into separate systems. Smart Sellers brings those workflows behind one seller-owned commerce boundary so the seller can:
 
-| AI role | What it does |
-|---|---|
-| **Customer Shopping Assistant** | Acts as the seller's always-available sales representative. It answers questions from the seller's catalogue, recommends suitable products, checks options and availability, builds carts, and guides customers to purchase. It can be surfaced on the seller's website and other supported customer-facing channels. |
-| **Seller Commerce Steward** | Manages the seller's product line across connected marketplaces. It prepares and improves listings, publishes approved changes, monitors sales and stock, imports orders, detects channel conflicts, and recommends next actions. |
-| **Customer Communications Agent** | Handles enquiries before and after purchase. It follows up on orders, requests feedback, drafts replies using recorded order and fulfilment facts, prepares policy-governed support actions, and escalates cases that need a person. |
+- present products, services, hire/rental offerings, and bookable capacity from one catalogue;
+- keep inventory, pricing, availability, orders, and fulfilment context connected;
+- prepare marketplace and support actions with role-specific permissions and review;
+- give customers useful answers grounded in the seller's own commerce state.
 
-All three roles share the same catalogue, inventory, bookings, orders, customer context and seller-defined policies. They act with role-specific permissions and keep consequential seller changes reviewable.
+## Three roles, one commerce core
 
-## One commerce system for varied offerings
+| Role | Implemented responsibility |
+| --- | --- |
+| **Customer Shopping Assistant** | Product discovery, recommendations, option and availability checks, cart building, and purchase guidance in customer-facing contexts. |
+| **Seller Commerce Steward** | Catalogue quality, listing preparation, marketplace operations, inventory signals, order monitoring, and recommended seller actions. |
+| **Customer Communications Agent** | Order-aware replies, delivery and feedback follow-up, policy-governed support actions, and escalation when confidence or authority is insufficient. |
 
-Smart Sellers is intended to support more than conventional product checkout:
+The roles share the same commerce context but do not share unrestricted authority. `CommerceRoleRouter` selects a role from the interaction context, while `CustomerCommunicationAuthority` evaluates identity, confidence, amount, and action policy before sensitive support work can execute.
 
-- **Products:** variants, categories, bundles, content, channel listings and stock.
-- **Services:** service options, availability, appointments, deposits and customer follow-up.
-- **Hire and rental:** rental periods, availability, agreements, deposits, extensions, returns and charges.
-- **Bookings and reservations:** capacity, time slots, confirmations, changes, reminders and cancellation rules.
-- **Mixed catalogues:** physical products, services and bookable or rentable offerings can be presented through the same seller-owned commerce experience.
+## What makes the architecture useful
 
-This makes the platform suitable for merchants whose offering combines goods with installation, appointments, equipment hire, events, accommodation or other capacity-based services.
-
-## Commerce capabilities
-
-### Catalogue and listing operations
-
-- Central product records with variants, SKUs, descriptions, images, categories and pricing.
-- Channel-specific listing content linked to a canonical seller catalogue.
-- Listing quality and marketplace compliance checks.
-- Brand voice profiles and evidence-aware content suggestions.
-- Draft, preview, approve, publish and rollback flows for marketplace changes.
-- Bulk listing operations with dry runs, rate-limit governance and partial rollback.
-
-### Storefront and assisted selling
-
-- A seller-owned digital store and customer shopping experience.
-- Embedded or channel-surfaced shopping assistant, subject to each destination's integration rules.
-- Product discovery, conversational questions, recommendations, cart and checkout.
-- Customer-specific context, preferences and budget controls.
-- Product, service, hire and booking availability presented in a consistent experience.
-
-### Marketplace sales and inventory
-
-- Marketplace connection and credential management.
-- Marketplace search, listing reads, order import and governed listing writes.
-- Inventory locations, stock adjustments, reservations and channel allocation.
-- Inventory reconciliation and conflict queues.
-- Unified order views across native storefront and connected marketplaces.
-- Sales and order exceptions surfaced for seller action.
-
-### Orders, payments and fulfilment
-
-- Cart and checkout sessions, orders, order events and returns.
-- Payment intents, payment operations, refunds, webhook processing and BNPL structures.
-- Shipping methods, quotes, zones, fulfilment and tax configuration.
-- Settlement entries, reconciliation and order exception management.
-- Rental agreements, charges, payments, receipts and ledger records.
-
-Payment, shipping, tax and marketplace capabilities depend on configured providers and verified integrations. The presence of an adapter or API does not by itself mean every provider is production-ready.
-
-### Customer communications
-
-- Customer communication threads across supported channels.
-- Order-aware response drafting grounded in recorded commerce state.
-- Follow-up for order progress, delivery, feedback and service recovery.
-- Prepared support actions such as returns, cancellations, refunds, address corrections, replacements and store credit.
-- Approval policies, action history and human handoff for sensitive or uncertain cases.
-
-### Seller control and safety
-
-- Seller, shopper and support roles with separate tool permissions.
-- Tenant-scoped commerce data and credential vault patterns.
-- Approval tokens for governed actions.
-- Idempotency, action journals, rollback records and audit history.
-- Queue-based marketplace reads, writes, inventory reconciliation and payment webhooks.
-- Automation configured by action and policy, with review where required.
-
-## Architecture
-
-<p align="center"><img src="app/extensions/ChatbotEcommerce/docs/assets/smart-sellers-architecture.svg" alt="Smart Sellers architecture infographic: seller catalogue, three AI roles, shared commerce core, connected channels and seller authority controls" width="100%"></p>
+Smart Sellers is a Laravel/PHP extension built around a durable commerce core rather than a chat interface placed beside an existing store:
 
 ```text
-Seller catalogue and policies
-             �
-       Shared commerce core
-       ��� Products, services, hire and bookings
-       ��� Inventory, availability and pricing
-       ��� Carts, orders, payments and fulfilment
-       ��� Customer context and communication history
-             �
-       Three seller-side AI roles
-       ��� Customer Shopping Assistant
-       ��� Seller Commerce Steward
-       ��� Customer Communications Agent
-             �
-       Seller store and supported channels
+Seller catalogue + policies
+          |
+          v
+Commerce context: products, services, hire, bookings,
+inventory, availability, carts, orders, payments, fulfilment
+          |
+          +--> Customer Shopping Assistant
+          +--> Seller Commerce Steward
+          +--> Customer Communications Agent
+          |
+          v
+Seller store, marketplaces, support channels, and reviewable actions
 ```
 
-The existing extension is built as a Laravel/PHP module with service providers, APIs, persistence models, jobs, queues, scheduled lifecycle tasks, marketplace and payment provider contracts, and a capability manifest. The extension currently lives at `app/extensions/ChatbotEcommerce/`; **Smart Sellers** is the product name for the seller-owned commerce system.
+The design keeps seller authority with the commerce application. AI-assisted work can prepare or recommend an action, while permissions, approval tokens, idempotency, action journals, rollback records, and audit history provide the durable boundary for consequential changes.
 
-## Repository implementation
+## Implemented commerce capabilities
 
-The codebase already contains meaningful commerce foundations, including catalogue and variant records, carts and checkout sessions, inventory reservations, pricing rules, orders and returns, marketplace connections and listing proposals, customer communication threads and actions, and a unified order workbench.
+- Catalogue records with variants, SKUs, content, categories, pricing, and channel listings.
+- Carts, checkout sessions, orders, returns, payment operations, webhooks, shipping, tax, and fulfilment foundations.
+- Inventory locations, reservations, stock adjustments, channel allocation, reconciliation, and conflict queues.
+- Marketplace connections with listing reads, order import, governed writes, dry runs, rate-limit handling, and partial rollback paths.
+- Customer communication threads, order-aware response drafting, support actions, human handoff, and escalation.
+- Services, appointments, hire/rental periods, deposits, extensions, bookings, reservations, and capacity-oriented offerings.
 
-This README describes the intended integrated product. It does not claim that every listed workflow, marketplace, payment provider, storefront surface or AI role has passed end-to-end production verification. Treat the repository's tests, provider contracts and deployment configuration as the evidence for each released capability.
+Provider integrations and live readiness depend on the configured host and external credentials; the presence of a contract or adapter is not by itself a production result.
 
-### What is actually implemented
+## Source map
 
-The three-role slice is a governed application runtime, not a claim that three independent autonomous models are bundled here. `CommerceRoleRouter` resolves a customer storefront or support context to the shopping or communications role and routes authenticated sellers to the seller steward. `CustomerCommunicationAuthority` applies confidence, identity, amount and action rules before a support action can execute. The host chatbot/AI runtime remains responsible for model-provider orchestration; this extension exposes the commerce context, tools, policies and durable action boundary.
+| Area | Entry points |
+| --- | --- |
+| Extension wiring | [`extension.manifest.json`](app/extensions/ChatbotEcommerce/extension.manifest.json), [`ChatbotEcommerceServiceProvider.php`](app/extensions/ChatbotEcommerce/System/ChatbotEcommerceServiceProvider.php) |
+| Role resolution | [`CommerceRoleRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/CommerceRoleRuntime.php), [`CommerceRoleRouter.php`](app/extensions/ChatbotEcommerce/System/Support/CommerceRoleRouter.php) |
+| Support authority | [`CustomerCommunicationAuthority.php`](app/extensions/ChatbotEcommerce/System/Support/CustomerCommunicationAuthority.php) |
+| Commerce tools | [`EcommerceToolService.php`](app/extensions/ChatbotEcommerce/System/Services/EcommerceToolService.php), [`MarketplaceToolRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/MarketplaceToolRuntime.php), [`OrderWorkbenchToolRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/OrderWorkbenchToolRuntime.php) |
+| Durable commerce state | [`database/migrations`](app/extensions/ChatbotEcommerce/database/migrations), models, queues, and scheduled lifecycle jobs |
+| Architecture notes | [`ChatbotEcommerce/OPERATIONS.md`](app/extensions/ChatbotEcommerce/docs/OPERATIONS.md), [`document-index.json`](docs/document-index.json), [`extension-inventory.json`](docs/extension-inventory.json) |
 
-Useful source locations:
+## Evidence and focused verification
 
-- [`extension.manifest.json`](app/extensions/ChatbotEcommerce/extension.manifest.json) - compatibility, routes, permissions, owned tables, queues and lifecycle declarations.
-- [`ChatbotEcommerceServiceProvider.php`](app/extensions/ChatbotEcommerce/System/ChatbotEcommerceServiceProvider.php) - route, migration, command and scheduler wiring.
-- [`CommerceRoleRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/CommerceRoleRuntime.php), [`CommerceRoleRouter.php`](app/extensions/ChatbotEcommerce/System/Support/CommerceRoleRouter.php) and [`CustomerCommunicationAuthority.php`](app/extensions/ChatbotEcommerce/System/Support/CustomerCommunicationAuthority.php) - role resolution and authority decisions.
-- [`EcommerceToolService.php`](app/extensions/ChatbotEcommerce/System/Services/EcommerceToolService.php), [`MarketplaceToolRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/MarketplaceToolRuntime.php) and [`OrderWorkbenchToolRuntime.php`](app/extensions/ChatbotEcommerce/System/Services/OrderWorkbenchToolRuntime.php) - the tool-facing commerce boundary.
-- [`database/migrations`](app/extensions/ChatbotEcommerce/database/migrations) - tenant-scoped commerce state, action journals, communication records and booking capacity.
-
-### Focused verification quickstart
-
-These checks are intentionally host-independent and exercise the role router, support authority matrix and extension wiring:
+The repository contains standalone primitive and contract checks for role routing, support authority, extension wiring, payments, marketplace behavior, inventory, and order workbench boundaries. The quickest source-backed checks are:
 
 ```bash
 php app/extensions/ChatbotEcommerce/tests/run_three_role_primitives.php
 php app/extensions/ChatbotEcommerce/tests/run_three_role_contract_checks.php
+php extensions/chatbot-ecommerce/tests/run_payment_primitives.php
 ```
 
-The extension also contains 38 standalone `run_*` primitive/contract scripts, 14 PHPUnit feature files and unit/conformance tests. A full host verification uses the repository's Composer/Pest installation and should be run only after configuring a compatible Laravel host; this checkout does not include a root `.env.example`, and external provider credentials are not test fixtures.
+The commerce extension also contains PHPUnit feature and unit coverage. Run the full suite inside a compatible Laravel host with the repository's Composer/Pest configuration; this repository is an extension bundle, not a standalone host application.
 
-The strongest repository evidence is therefore source-level contract coverage plus the focused scripts above. It is not evidence of live marketplace, payment, model-provider or multi-tenant production operation.
+## Extension boundary
 
-## Product boundary
+Smart Sellers focuses on seller-owned commerce: catalogue, inventory, offers, bookings, orders, payments, fulfilment, marketplaces, and customer communication. Shared host infrastructure is used where required, while unrelated creative-generation tools, unrelated vertical engines, and general-purpose provider libraries are outside this product boundary.
 
-Smart Sellers focuses on helping a seller present, sell and support the seller's own offerings across channels. General-purpose AI provider libraries, unrelated creative-generation tools, unrelated business vertical engines and non-commerce extension suites are outside the product boundary. Shared infrastructure remains in scope when the commerce system depends on it.
+## Setup
 
-## Development
+Smart Sellers targets the Laravel/PHP stack declared by `app/extensions/ChatbotEcommerce/extension.manifest.json`. Install it through a compatible host, then configure the host's Composer, database, queues, channels, and provider credentials. There is no root `.env.example` or standalone application bootstrap in this repository.
 
-The extension targets the Laravel/PHP stack declared in its manifest. Use the repository's Composer, Node, test and CI configuration as the source of truth for setup and validation.
+## Honest scope
 
-Before release, verify the extension in a clean host installation, including tenant isolation, role permissions, checkout and payment provider flows, marketplace reads and writes, inventory concurrency, support actions, queues, migrations, rollback and uninstall behaviour.
+The checked-in code demonstrates the commerce extension's contracts, role routing, policies, durable state, and focused tests. It does not by itself prove live marketplace writes, payment settlement, model-provider quality, every supported channel, or multi-tenant production operation. Those require a compatible host, provider-specific fixtures, credentials, and deployment validation.
 
-The repository also contains extensive design, migration and historical material under `docs/`, including `docs/legacy-root/` and archived TitanAI plans. Those files are retained as provenance and pending-integration context; they are not treated as proof that the corresponding feature is active in the Smart Sellers runtime.
+Historical and pending-integration material under `docs/legacy-root/` and related archive areas is retained for provenance. It is not presented as active runtime capability.
 
 ## License and third-party terms
 
-Review the repository's applicable license and the terms of each marketplace, payment, shipping, tax, AI and messaging provider before deployment or redistribution.
+Review the repository's applicable license and the terms of each marketplace, payment, shipping, tax, AI, and messaging provider before deployment or redistribution.
 
