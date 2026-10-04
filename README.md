@@ -16,7 +16,7 @@ The quickest provider-free role/authority lane is split into two standalone chec
 | Check | Deterministic checks | What it covers |
 | --- | ---: | --- |
 | Three-role primitives | **12** | role routing, self-elevation rejection, confidence/identity decisions, refund limits, human-only fraud/legal paths, fail-closed unknown actions |
-| Three-role contract checks | **26** | required files, communication tables, runtime methods, identity gating, controller/provider wiring, routes, configuration, manifests, OpenAPI and tool-service wiring |
+| Three-role contract checks | **82** | required files, communication tables, runtime methods, identity gating, controller/provider wiring, routes, configuration, manifests, OpenAPI and tool-service wiring |
 
 Reproduce:
 
