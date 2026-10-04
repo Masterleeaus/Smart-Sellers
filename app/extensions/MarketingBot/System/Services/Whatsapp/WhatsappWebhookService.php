@@ -2,6 +2,7 @@
 
 namespace App\Extensions\MarketingBot\System\Services\Whatsapp;
 
+use App\Contracts\LoggerContract;
 use App\Extensions\MarketingBot\System\Models\CampaignMessageAnalytic;
 use App\Extensions\MarketingBot\System\Models\MarketingConversation;
 use App\Extensions\MarketingBot\System\Models\MarketingMessageHistory;
@@ -10,29 +11,54 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 class WhatsappWebhookService
 {
+    public function __construct(private readonly LoggerContract $logger)
+    {
+    }
+
     public function handle(Request $request, WhatsappChannel $whatsappChannel): void
     {
-        $marketingConversation = $this->updateOrCreateMarketingConversation($request, $whatsappChannel);
-
-        if ($request->input('MessageType') === 'text' && ! empty($request->input('Body'))) {
-            MarketingMessageHistory::query()->create([
-                'conversation_id' => $marketingConversation->getKey(),
-                'message_id'      => $request->input('SmsSid'),
-                'model'           => null,
-                'role'            => 'user',
-                'message'         => $request->input('Body'),
-                'type'            => 'default',
-                'message_type'    => 'text',
-                'content_type'    => 'text',
-                'created_at'      => now(),
+        try {
+            $this->logger->debug('Processing Twilio Whatsapp webhook', [
+                'channel_id' => $whatsappChannel->getKey(),
+                'message_type' => $request->input('MessageType'),
             ]);
 
-            app(WhatsappReplyService::class)
-                ->setWhatsappChannel($whatsappChannel)
-                ->sendReply($request, $marketingConversation);
+            $marketingConversation = $this->updateOrCreateMarketingConversation($request, $whatsappChannel);
+
+            if ($request->input('MessageType') === 'text' && ! empty($request->input('Body'))) {
+                MarketingMessageHistory::query()->create([
+                    'conversation_id' => $marketingConversation->getKey(),
+                    'message_id'      => $request->input('SmsSid'),
+                    'model'           => null,
+                    'role'            => 'user',
+                    'message'         => $request->input('Body'),
+                    'type'            => 'default',
+                    'message_type'    => 'text',
+                    'content_type'    => 'text',
+                    'created_at'      => now(),
+                ]);
+
+                $this->logger->info('Whatsapp message received and stored', [
+                    'conversation_id' => $marketingConversation->getKey(),
+                    'message_id' => $request->input('SmsSid'),
+                    'channel_id' => $whatsappChannel->getKey(),
+                ]);
+
+                app(WhatsappReplyService::class)
+                    ->setWhatsappChannel($whatsappChannel)
+                    ->sendReply($request, $marketingConversation);
+            }
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to process Twilio Whatsapp webhook', [
+                'channel_id' => $whatsappChannel->getKey(),
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+            ]);
+            throw $e;
         }
     }
 
