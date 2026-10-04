@@ -4,9 +4,51 @@
 
 **One governed commerce system for sellers who need to sell, operate, and support a catalogue across channels.**
 
+## Overview
+
 Smart Sellers gives a seller one source of truth for products, variants, prices, availability, orders, customer context, and policy. Three coordinated roles then use that shared foundation: a shopping assistant for customers, a commerce steward for seller operations, and a communications agent for post-purchase support.
 
-## The seller problem
+
+## Measured evidence
+
+The quickest provider-free role/authority lane is split into two standalone checks:
+
+| Check | Deterministic checks | What it covers |
+| --- | ---: | --- |
+| Three-role primitives | **12** | role routing, self-elevation rejection, confidence/identity decisions, refund limits, human-only fraud/legal paths, fail-closed unknown actions |
+| Three-role contract checks | **26** | required files, communication tables, runtime methods, identity gating, controller/provider wiring, routes, configuration, manifests, OpenAPI and tool-service wiring |
+
+Reproduce:
+
+```bash
+php app/extensions/ChatbotEcommerce/tests/run_three_role_primitives.php
+php app/extensions/ChatbotEcommerce/tests/run_three_role_contract_checks.php
+```
+
+The commerce engine also contains payment, marketplace, inventory and order-workbench checks plus PHPUnit feature/unit coverage. These focused scripts verify the role and authority contracts without needing marketplace, payment or model credentials.
+
+## What is new
+
+Smart Sellers' technical signature is **three AI-facing roles over one commerce truth with different authority ceilings**.
+
+```text
+Shared seller commerce state
+       ↓
+Role router
+  ┌────┼─────────────┐
+  ↓    ↓             ↓
+Shop  Seller       Customer
+assist steward     communications
+  └────┼─────────────┘
+       ↓
+Authority / approval / escalation
+       ↓
+Commerce action journal + durable state
+```
+
+The useful distinction is not simply “three agents.” Customers cannot self-elevate into seller authority, private order/payment context is withheld until identity verification, refund actions respect explicit limits, and fraud/legal paths remain human-only.
+
+## Product problem
 
 Commerce becomes expensive to operate when the catalogue, marketplace listings, inventory, orders, and customer conversations drift into separate systems. Smart Sellers brings those workflows behind one seller-owned commerce boundary so the seller can:
 
@@ -15,7 +57,7 @@ Commerce becomes expensive to operate when the catalogue, marketplace listings, 
 - prepare marketplace and support actions with role-specific permissions and review;
 - give customers useful answers grounded in the seller's own commerce state.
 
-## Three roles, one commerce core
+## Verified capabilities
 
 | Role | Implemented responsibility |
 | --- | --- |
@@ -25,7 +67,7 @@ Commerce becomes expensive to operate when the catalogue, marketplace listings, 
 
 The roles share the same commerce context but do not share unrestricted authority. `CommerceRoleRouter` selects a role from the interaction context, while `CustomerCommunicationAuthority` evaluates identity, confidence, amount, and action policy before sensitive support work can execute.
 
-## What makes the architecture useful
+## Architecture
 
 Smart Sellers is a Laravel/PHP extension built around a durable commerce core rather than a chat interface placed beside an existing store:
 
