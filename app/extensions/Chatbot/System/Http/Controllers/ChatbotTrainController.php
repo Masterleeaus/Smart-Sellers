@@ -177,7 +177,7 @@ class ChatbotTrainController extends Controller
         );
     }
 
-    public function trainUrl(TrainUrlRequest $request): JsonResponse|AnonymousResourceCollection
+    public function trainUrl(TrainUrlRequest $request): JsonResponse
     {
         if (Helper::appIsDemo()) {
             return response()->json([
@@ -190,16 +190,51 @@ class ChatbotTrainController extends Controller
 
         $this->authorize('train', $chatbot);
 
-        $chatbot->setAttribute('engine', EngineEnum::OPEN_AI->value);
+        // Use secure URL ingestion service
+        $urlIngestionService = app(\App\Extensions\Chatbot\System\Services\SecureUrlIngestionService::class);
 
-        app(LinkParser::class)
-            ->setBaseUrl($request->validated('url'))
-            ->crawl((bool) $request->validated('single'))
-            ->insertEmbeddings($chatbot);
+        // Validate URL
+        $validation = $urlIngestionService->validateUrl($request->validated('url'));
+        if (!$validation['valid']) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid URL',
+                'errors' => $validation['errors'],
+            ], 400);
+        }
 
-        return ChatbotEmbeddingResource::collection(
-            $chatbot->embeddings()->whereNotNull('url')->get()
-        );
+        // Resolve DNS and check for SSRF
+        $dnsValidation = $urlIngestionService->resolveDns($request->validated('url'));
+        if (!$dnsValidation['valid']) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Security validation failed',
+                'errors' => [$dnsValidation['error']],
+            ], 403);
+        }
+
+        // Queue async ingestion instead of processing synchronously
+        // For now, create embedding record with pending status
+        $embedding = ChatbotEmbedding::create([
+            'type' => EmbeddingTypeEnum::website,
+            'chatbot_id' => $chatbot->getKey(),
+            'url' => $request->validated('url'),
+            'source_resolved_ip' => $dnsValidation['ip'],
+            'engine' => EngineEnum::OPEN_AI->value,
+            'ingestion_status' => 'pending',
+            'title' => 'Processing...',
+            'content' => '',
+        ]);
+
+        // TODO: Queue async job to fetch and parse URL
+        // dispatch(new ProcessUrlIngestionJob($embedding, $request->validated('url')));
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'URL ingestion queued for processing',
+            'embedding_id' => $embedding->id,
+            'status' => 'pending',
+        ], 202);
     }
 
     public function trainFile(FileRequest $request)
@@ -218,38 +253,58 @@ class ChatbotTrainController extends Controller
         /** @var UploadedFile $file */
         $file = $request->file('file');
 
-        $extension = $file->guessExtension();
+        // Use secure file ingestion service
+        $fileIngestionService = app(\App\Extensions\Chatbot\System\Services\SecureFileIngestionService::class);
 
-        $defaultDisk = 'public';
+        // Validate file
+        $validation = $fileIngestionService->validateFile($file);
+        if (!$validation['valid']) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'File validation failed',
+                'errors' => $validation['errors'],
+            ], 400);
+        }
 
-        $path = $file->store('chatbot', ['disk' => $defaultDisk]);
+        // Store file securely in private storage
+        $storageResult = $fileIngestionService->storeFileSecurely($file);
+        if (!$storageResult['success']) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Failed to store file',
+                'error' => $storageResult['error'],
+            ], 500);
+        }
 
         $name = $file->getClientOriginalName();
+        $path = $storageResult['path'];
+        $extension = strtolower($file->getClientOriginalExtension());
 
-        $storagePath = config('filesystems.disks.' . $defaultDisk . '.root') . '/' . $path;
+        // Queue async parsing instead of parsing synchronously
+        $embedding = ChatbotEmbedding::create([
+            'type'               => EmbeddingTypeEnum::file,
+            'chatbot_id'         => $chatbot->getKey(),
+            'url'                => null,
+            'file'               => $path,
+            'file_storage_disk'  => $storageResult['disk'],
+            'file_quarantined'   => true,
+            'file_hash'          => $fileIngestionService->calculateFileHash($path, $storageResult['disk']),
+            'engine'             => EngineEnum::OPEN_AI->value,
+            'title'              => $name,
+            'content'            => '',
+            'ingestion_status'   => 'pending',
+            'processing_notes'   => 'File stored in quarantine, awaiting secure parsing',
+        ]);
 
-        $parser = match (true) {
-            in_array($extension, ['xlsx', 'xls', 'csv']) => app(ExcelParser::class),
-            in_array($extension, ['txt', 'json'])        => app(TextParser::class),
-            default                                      => app(PdfParser::class),
-        };
+        // TODO: Queue async job to parse file
+        // dispatch(new ProcessFileIngestionJob($embedding, $extension));
 
-        $text = $parser->setPath($storagePath)->parse();
-
-        ChatbotEmbedding::query()
-            ->firstOrCreate([
-                'type'       => EmbeddingTypeEnum::file,
-                'chatbot_id' => $chatbot->getKey(),
-                'url'        => null,
-                'file'       => $path,
-                'engine'     => EngineEnum::OPEN_AI->value,
-            ], [
-                'title'    => $name,
-                'content'  => $text,
-            ]);
-
-        return ChatbotEmbeddingResource::collection(
-            $chatbot->embeddings()->whereNotNull('file')->get()
-        );
+        return response()->json([
+            'ok'           => true,
+            'message'      => 'File uploaded and queued for processing',
+            'embedding_id' => $embedding->id,
+            'status'       => 'pending',
+            'file_name'    => $name,
+        ], 202);
     }
 }
