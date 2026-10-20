@@ -21,10 +21,9 @@ class TitanController extends Controller
         return response()->json([
             'catalogue_version' => TitanRegistry::VERSION,
             'applications' => $applications,
-            // Compatibility alias retained for clients that used `templates`
-            // as the top-level application list.
             'templates' => $applications,
             'vertical_templates' => TitanRegistry::verticals(),
+            'functional_templates' => TitanRegistry::functional(),
             'workspace_templates' => TitanRegistry::workspaces(),
             'legacy_templates' => TitanRegistry::legacy(),
             'legacy_slug_map' => PlatformApplicationRegistry::legacyMap(),
@@ -43,17 +42,22 @@ class TitanController extends Controller
         }
 
         $template = TitanRegistry::get($app);
-
         if (! $template) {
             return response()->json(['message' => 'Titan application or template not found.'], 404);
         }
 
-        return response()->json([
+        $payload = [
             'kind' => $template['category'].'-template',
             ...$template,
             'schema' => TemplateSchema::resolve($app),
             'workcore_runtime_available' => $workcore->runtimeAvailable(),
-        ]);
+        ];
+
+        if (($template['category'] ?? null) === 'vertical') {
+            $payload['composition'] = TitanRegistry::compose($app);
+        }
+
+        return response()->json($payload);
     }
 
     public function install(Request $request, string $app): JsonResponse
@@ -79,15 +83,24 @@ class TitanController extends Controller
             return response()->json(['message' => 'Titan application or template not found.'], 404);
         }
 
+        $role = trim($request->string('role')->toString());
+        $composition = ($template['category'] ?? null) === 'vertical'
+            ? TitanRegistry::compose($app, $role !== '' ? $role : null)
+            : null;
+
         return response()->json([
             'installed' => true,
             'kind' => $template['category'].'-template',
             'template' => $app,
             'name' => $request->string('name')->toString() ?: $template['name'],
-            'platform_app' => $template['platform_app'] ?? 'titan-zero',
+            'platform_app' => $composition['platform_app'] ?? $template['platform_app'] ?? 'titan-zero',
             'workspaces' => $template['workspaces'] ?? [],
+            'functional_templates' => $template['functional_templates'] ?? [],
             'roles' => $template['roles'] ?? [],
+            'role_presets' => $template['role_presets'] ?? [],
+            'terminology' => $template['terminology'] ?? [],
             'chatbot' => $template['chatbot'] ?? [],
+            'composition' => $composition,
             'schema' => TemplateSchema::resolve($app),
             'config' => $request->input('config', []),
         ]);
@@ -153,11 +166,9 @@ class TitanController extends Controller
     private function workCoreApplications(array $applications): array
     {
         $mapped = [];
-
         foreach ($applications as $application) {
             $mapped[$application['slug']] = $application['workcore'];
         }
-
         return $mapped;
     }
 }

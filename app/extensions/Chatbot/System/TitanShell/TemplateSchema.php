@@ -9,11 +9,11 @@ use RuntimeException;
 
 final class TemplateSchema
 {
-    public const VERSION = '2.1.0';
+    public const VERSION = '2.2.0';
 
     /**
-     * Resolve canonical app schemas, legacy aliases, vertical presets and
-     * workspace presets into the same shared-shell schema contract.
+     * Resolve canonical app schemas, legacy aliases, vertical presets,
+     * functional templates and workspace presets into the shared-shell schema.
      *
      * @return array<string,mixed>
      */
@@ -73,12 +73,10 @@ final class TemplateSchema
             if (($template['category'] ?? null) === 'legacy-template') {
                 continue;
             }
-
             $schemas[$slug] = self::normalise(self::fromTemplate($template), $slug);
         }
 
         ksort($schemas);
-
         return array_values($schemas);
     }
 
@@ -86,7 +84,6 @@ final class TemplateSchema
     private static function read(string $slug): ?array
     {
         $path = self::directory().DIRECTORY_SEPARATOR.$slug.'.json';
-
         if (! is_file($path)) {
             return null;
         }
@@ -95,7 +92,6 @@ final class TemplateSchema
         if (! is_array($decoded)) {
             throw new RuntimeException('Invalid Titan template schema: '.$slug);
         }
-
         return $decoded;
     }
 
@@ -123,6 +119,15 @@ final class TemplateSchema
                 'icon' => (string) ($template['icon'] ?? 'apps'),
                 'accent' => (string) ($template['color'] ?? 'var(--lqd-ext-chat-primary)'),
             ],
+            'template' => [
+                'category' => (string) ($template['category'] ?? 'template'),
+                'type' => (string) ($template['type'] ?? 'template'),
+                'platform_app' => $template['platform_app'] ?? null,
+                'functional_templates' => array_values((array) ($template['functional_templates'] ?? [])),
+                'workspaces' => array_values((array) ($template['workspaces'] ?? [])),
+                'terminology' => (array) ($template['terminology'] ?? []),
+                'role_presets' => (array) ($template['role_presets'] ?? []),
+            ],
             'navigation' => (array) ($template['navigation'] ?? []),
             'home' => (array) ($template['home'] ?? ['widgets' => [], 'quick_actions' => []]),
             'chat' => [
@@ -143,6 +148,7 @@ final class TemplateSchema
             'offline' => [
                 'records' => array_values((array) ($offline['records'] ?? [])),
                 'packs' => array_values((array) ($offline['packs'] ?? [])),
+                'commands' => array_values((array) ($offline['commands'] ?? [])),
                 'retention' => ['completed_days' => 30],
                 'conflict_rules' => (array) ($offline['conflict_rules'] ?? [
                     'server_authoritative' => true,
@@ -195,11 +201,12 @@ final class TemplateSchema
             'schema_version' => (string) ($schema['schema_version'] ?? self::VERSION),
             ...$schema,
             'identity' => $identity,
+            'template' => (array) ($schema['template'] ?? []),
             'navigation' => $navigation,
             'home' => (array) ($schema['home'] ?? ['widgets' => [], 'quick_actions' => []]),
             'chat' => (array) ($schema['chat'] ?? ['persistent' => true, 'role' => 'Chatbot']),
             'workcore' => (array) ($schema['workcore'] ?? ['domains' => [], 'commands' => [], 'read_models' => []]),
-            'offline' => (array) ($schema['offline'] ?? ['records' => [], 'packs' => []]),
+            'offline' => (array) ($schema['offline'] ?? ['records' => [], 'packs' => [], 'commands' => []]),
             'permissions' => array_values((array) ($schema['permissions'] ?? [])),
             'privacy' => (array) ($schema['privacy'] ?? ['default_mode' => 'device-first']),
             'notifications' => array_values((array) ($schema['notifications'] ?? [])),
@@ -223,6 +230,7 @@ final class TemplateSchema
                 'icon' => 'message',
                 'accent' => 'var(--lqd-ext-chat-primary)',
             ],
+            'template' => [],
             'navigation' => [
                 'default_view' => 'home',
                 'primary' => [['id' => 'home', 'label' => 'Home', 'icon' => 'home', 'offline' => true]],
@@ -240,6 +248,7 @@ final class TemplateSchema
             'offline' => [
                 'records' => [],
                 'packs' => [],
+                'commands' => [],
                 'retention' => ['completed_days' => 0],
                 'conflict_rules' => ['server_authoritative' => true],
             ],

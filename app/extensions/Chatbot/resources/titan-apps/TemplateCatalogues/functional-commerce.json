@@ -1,0 +1,186 @@
+{
+  "catalogue_version": "2.2.0",
+  "category": "functional",
+  "templates": [
+    {
+      "name": "Booking",
+      "slug": "template-booking",
+      "type": "functional-template",
+      "category": "functional",
+      "description": "Reusable appointment, reservation, capacity and service-booking experience inside the shared Chatbot shell.",
+      "icon": "calendar",
+      "color": "#06B6D4",
+      "order": 100,
+      "platform_app": "titan-hub",
+      "platform_apps": ["titan-zero", "titan-go", "titan-desk", "titan-hub"],
+      "roles": ["owner", "manager", "reception", "dispatcher", "provider", "customer"],
+      "features": ["service-catalogue", "availability", "appointments", "reservations", "capacity", "staff-selection", "resource-selection", "waitlists", "deposits", "intake-forms", "recurring-bookings", "rescheduling", "cancellation", "offline-booking-request"],
+      "commerce_modes": ["service", "booking", "reservation", "class", "event"],
+      "workcore": {
+        "domains": ["CRM", "Catalogue", "Scheduling", "Capacity", "Workforce", "Premises", "Assets", "Finance", "Forms", "Documents"],
+        "commands": ["booking.request.create", "booking.reschedule.request", "booking.cancel.request"],
+        "read_models": ["booking_offerings", "booking_availability", "booking_status"]
+      },
+      "offline": {
+        "records": ["booking_offerings", "availability_snapshots", "booking_requests", "booking_status", "drafts", "outbox", "conflicts"],
+        "packs": ["functional-booking-default"],
+        "commands": ["booking.request.queue", "booking.reschedule.queue", "booking.cancel.queue"],
+        "conflict_rules": {"server_authoritative": true, "preserve_local_copy": true}
+      },
+      "chatbot": {
+        "name": "Booking Assistant",
+        "role": "Booking and reservation assistant",
+        "system_prompt": "Help the user discover services, prepare bookings and manage booking requests. Offline selections and scarce-resource reservations remain pending until WorkCore confirms availability.",
+        "suggested_prompts": ["Book a service", "Show available times", "Change my booking"]
+      },
+      "navigation": {
+        "default_view": "book",
+        "primary": [
+          {"id": "services", "label": "Services", "icon": "list", "offline": true},
+          {"id": "book", "label": "Book", "icon": "calendar", "offline": true},
+          {"id": "bookings", "label": "My bookings", "icon": "bookings", "offline": true},
+          {"id": "account", "label": "Account", "icon": "user", "offline": true}
+        ],
+        "drawer": [],
+        "header_actions": ["sync", "notifications", "settings"]
+      },
+      "home": {"widgets": ["upcoming_booking", "availability", "booking_status"], "quick_actions": ["book", "reschedule"]},
+      "permissions": ["template-booking.view", "template-booking.request"]
+    },
+    {
+      "name": "E-commerce Store",
+      "slug": "template-ecommerce",
+      "type": "functional-template",
+      "category": "functional",
+      "description": "Reusable product catalogue, cart, checkout and order experience inside the shared Chatbot shell.",
+      "icon": "shopping-bag",
+      "color": "#8B5CF6",
+      "order": 200,
+      "platform_app": "titan-hub",
+      "platform_apps": ["titan-zero", "titan-go", "titan-desk", "titan-hub"],
+      "roles": ["owner", "manager", "seller", "warehouse", "counter", "customer"],
+      "features": ["catalogue", "categories", "variants", "search", "cart", "promotions", "checkout-intent", "pickup", "delivery", "orders", "returns", "marketplaces", "offline-catalogue", "offline-cart"],
+      "commerce_modes": ["product", "subscription", "marketplace", "wholesale"],
+      "workcore": {
+        "domains": ["CRM", "Catalogue", "Commerce", "Inventory", "Warehousing", "Orders", "Fulfilment", "Finance", "Documents"],
+        "commands": ["commerce.order.submit", "commerce.return.request"],
+        "read_models": ["commerce_catalogue", "commerce_order_status", "inventory_availability"]
+      },
+      "offline": {
+        "records": ["commerce_catalogue", "commerce_prices", "commerce_carts", "commerce_cart_lines", "commerce_order_projections", "drafts", "outbox", "conflicts"],
+        "packs": ["functional-ecommerce-default"],
+        "commands": ["commerce.cart.save", "commerce.order.queue"],
+        "conflict_rules": {"server_authoritative": true, "preserve_local_copy": true}
+      },
+      "chatbot": {
+        "name": "Shopping Assistant",
+        "role": "Product discovery and commerce assistant",
+        "system_prompt": "Help the user discover products, build carts and prepare orders. Offline carts are local; final stock allocation, payment settlement and order acceptance remain server-confirmed.",
+        "suggested_prompts": ["Find a product", "Show my cart", "Track my order"]
+      },
+      "navigation": {
+        "default_view": "shop",
+        "primary": [
+          {"id": "shop", "label": "Shop", "icon": "shopping-bag", "offline": true},
+          {"id": "cart", "label": "Cart", "icon": "cart", "offline": true},
+          {"id": "orders", "label": "Orders", "icon": "package", "offline": true},
+          {"id": "account", "label": "Account", "icon": "user", "offline": true}
+        ],
+        "drawer": [],
+        "header_actions": ["sync", "notifications", "settings"]
+      },
+      "home": {"widgets": ["featured_products", "recent_orders", "cart_status"], "quick_actions": ["shop", "cart"]},
+      "permissions": ["template-ecommerce.view", "template-ecommerce.order"]
+    },
+    {
+      "name": "Hire and Rental",
+      "slug": "template-hire-rental",
+      "type": "functional-template",
+      "category": "functional",
+      "description": "Reusable asset availability, commercial hire request, pickup, return and condition experience inside the shared Chatbot shell.",
+      "icon": "package",
+      "color": "#EAB308",
+      "order": 300,
+      "platform_app": "titan-hub",
+      "platform_apps": ["titan-zero", "titan-go", "titan-desk", "titan-hub"],
+      "roles": ["owner", "manager", "rental-desk", "yard", "delivery-driver", "customer"],
+      "features": ["hire-catalogue", "date-range-availability", "asset-holds", "agreements", "deposits", "bonds", "pickup", "delivery", "checkout", "returns", "extensions", "condition-evidence", "damage-reporting", "offline-hire-request"],
+      "commerce_modes": ["hire", "rental", "booking", "product"],
+      "workcore": {
+        "domains": ["CRM", "Catalogue", "Scheduling", "Assets", "Fleet", "Operations", "Inventory", "Finance", "Forms", "Documents"],
+        "commands": ["hire.request.create", "hire.extension.request", "hire.return.request"],
+        "read_models": ["hire_catalogue", "asset_availability", "hire_status"]
+      },
+      "offline": {
+        "records": ["hire_catalogue", "asset_availability_snapshots", "hire_requests", "hire_status", "condition_drafts", "outbox", "conflicts"],
+        "packs": ["functional-hire-rental-default"],
+        "commands": ["hire.request.queue", "hire.return.queue", "condition.capture.queue"],
+        "conflict_rules": {"server_authoritative": true, "preserve_local_copy": true}
+      },
+      "chatbot": {
+        "name": "Hire Assistant",
+        "role": "Hire and rental assistant",
+        "system_prompt": "Help the user select rental assets, dates and commercial options. Offline requests do not reserve scarce assets until WorkCore confirms the hold.",
+        "suggested_prompts": ["What can I hire?", "Check availability", "Extend my hire"]
+      },
+      "navigation": {
+        "default_view": "browse",
+        "primary": [
+          {"id": "browse", "label": "Browse", "icon": "package", "offline": true},
+          {"id": "availability", "label": "Availability", "icon": "calendar", "offline": true},
+          {"id": "hires", "label": "My hires", "icon": "history", "offline": true},
+          {"id": "returns", "label": "Returns", "icon": "return", "offline": true}
+        ],
+        "drawer": [],
+        "header_actions": ["sync", "notifications", "settings"]
+      },
+      "home": {"widgets": ["active_hire", "due_returns", "availability"], "quick_actions": ["new-hire", "return"]},
+      "permissions": ["template-hire-rental.view", "template-hire-rental.request"]
+    },
+    {
+      "name": "Accommodation",
+      "slug": "template-accommodation",
+      "type": "functional-template",
+      "category": "functional",
+      "description": "Reusable room, stay, guest and accommodation reservation experience inside the shared Chatbot shell.",
+      "icon": "bed",
+      "color": "#6366F1",
+      "order": 400,
+      "platform_app": "titan-hub",
+      "platform_apps": ["titan-zero", "titan-go", "titan-desk", "titan-hub"],
+      "roles": ["owner", "manager", "front-desk", "housekeeping", "maintenance", "guest", "customer"],
+      "features": ["property-search", "room-availability", "rate-plans", "guest-count", "stays", "reservations", "add-ons", "deposits", "balances", "guest-details", "check-in", "access-instructions", "modifications", "cancellations", "offline-reservation-request"],
+      "commerce_modes": ["accommodation", "booking", "service", "product"],
+      "workcore": {
+        "domains": ["CRM", "Accommodation", "Premises", "Scheduling", "Operations", "Workforce", "Assets", "Finance", "Documents"],
+        "commands": ["accommodation.reservation.request", "accommodation.modify.request", "accommodation.cancel.request"],
+        "read_models": ["accommodation_availability", "accommodation_rates", "reservation_status"]
+      },
+      "offline": {
+        "records": ["accommodation_properties", "accommodation_spaces", "rate_snapshots", "reservation_requests", "reservation_status", "outbox", "conflicts"],
+        "packs": ["functional-accommodation-default"],
+        "commands": ["accommodation.reservation.queue", "accommodation.modify.queue", "accommodation.cancel.queue"],
+        "conflict_rules": {"server_authoritative": true, "preserve_local_copy": true}
+      },
+      "chatbot": {
+        "name": "Stay Assistant",
+        "role": "Accommodation and stay assistant",
+        "system_prompt": "Help guests discover spaces and prepare stay requests. Cached availability is advisory offline; occupancy and reservation confirmation remain WorkCore-authoritative.",
+        "suggested_prompts": ["Find a room", "Show my stay", "Change my reservation"]
+      },
+      "navigation": {
+        "default_view": "search-stays",
+        "primary": [
+          {"id": "search-stays", "label": "Search stays", "icon": "search", "offline": true},
+          {"id": "properties", "label": "Properties", "icon": "building", "offline": true},
+          {"id": "stays", "label": "My stay", "icon": "bed", "offline": true},
+          {"id": "account", "label": "Account", "icon": "user", "offline": true}
+        ],
+        "drawer": [],
+        "header_actions": ["sync", "notifications", "settings"]
+      },
+      "home": {"widgets": ["upcoming_stay", "reservation_status", "amount_due"], "quick_actions": ["search-stays", "manage-stay"]},
+      "permissions": ["template-accommodation.view", "template-accommodation.request"]
+    }
+  ]
+}
