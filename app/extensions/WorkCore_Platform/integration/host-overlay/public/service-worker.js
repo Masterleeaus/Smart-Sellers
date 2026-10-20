@@ -23,13 +23,19 @@ const STATIC_ASSETS = [
 
 // Limit cache size
 const limitCacheSize = (cacheName, maxSize) => {
-    caches.open(cacheName).then(cache => {
-        cache.keys().then(keys => {
-            if (keys.length > maxSize) {
-                cache.delete(keys[0]).then(() => limitCacheSize(cacheName, maxSize));
-            }
-        });
-    });
+    caches.open(cacheName)
+        .then(cache => {
+            return cache.keys()
+                .then(keys => {
+                    if (keys.length > maxSize) {
+                        return cache.delete(keys[0])
+                            .then(() => limitCacheSize(cacheName, maxSize))
+                            .catch(err => console.error('[Service Worker] Failed to delete cache entry:', err));
+                    }
+                })
+                .catch(err => console.error('[Service Worker] Failed to retrieve cache keys:', err));
+        })
+        .catch(err => console.error('[Service Worker] Failed to open cache:', err));
 };
 
 // Install event - cache static assets
@@ -57,11 +63,13 @@ self.addEventListener('activate', event => {
                         .filter(name => name.startsWith('meetup-chat-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
                         .map(name => {
                             console.log('[Service Worker] Deleting old cache:', name);
-                            return caches.delete(name);
+                            return caches.delete(name)
+                                .catch(err => console.error('[Service Worker] Failed to delete cache:', name, err));
                         })
                 );
             })
             .then(() => self.clients.claim())
+            .catch(err => console.error('[Service Worker] Activate failed:', err))
     );
 });
 
@@ -121,17 +129,32 @@ self.addEventListener('fetch', event => {
                         // Cache dynamic content
                         caches.open(DYNAMIC_CACHE)
                             .then(cache => {
-                                cache.put(request, responseToCache);
-                                limitCacheSize(DYNAMIC_CACHE, MAX_DYNAMIC_CACHE_SIZE);
-                            });
+                                return cache.put(request, responseToCache)
+                                    .then(() => limitCacheSize(DYNAMIC_CACHE, MAX_DYNAMIC_CACHE_SIZE))
+                                    .catch(err => console.error('[Service Worker] Failed to cache response:', err));
+                            })
+                            .catch(err => console.error('[Service Worker] Failed to open dynamic cache:', err));
 
                         return networkResponse;
                     })
-                    .catch(() => {
+                    .catch(err => {
+                        console.error('[Service Worker] Fetch failed:', request.url, err);
                         // Network failed, try to serve offline page for navigation requests
                         if (request.destination === 'document') {
-                            return caches.match('/offline.html');
+                            return caches.match('/offline.html')
+                                .catch(offlineErr => {
+                                    console.error('[Service Worker] Failed to load offline page:', offlineErr);
+                                    return new Response('Offline - unable to load page', { status: 503 });
+                                });
                         }
+                    });
+            })
+            .catch(err => {
+                console.error('[Service Worker] Cache match failed:', request.url, err);
+                // Fallback to network fetch
+                return fetch(request)
+                    .catch(() => {
+                        return new Response('Service unavailable', { status: 503 });
                     });
             })
     );
@@ -147,9 +170,21 @@ self.addEventListener('message', event => {
 self.addEventListener('sync', event => {
     if (event.tag === 'titan-zero-sync') {
         event.waitUntil(
-            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-                clients.forEach(client => client.postMessage({ type: 'TITAN_ZERO_FLUSH_OPERATIONS' }));
-            })
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+                .then(clients => {
+                    try {
+                        clients.forEach(client => {
+                            try {
+                                client.postMessage({ type: 'TITAN_ZERO_FLUSH_OPERATIONS' });
+                            } catch (err) {
+                                console.error('[Service Worker] Failed to post message to client:', err);
+                            }
+                        });
+                    } catch (err) {
+                        console.error('[Service Worker] Error processing clients:', err);
+                    }
+                })
+                .catch(err => console.error('[Service Worker] Failed to match clients:', err))
         );
     }
 });
