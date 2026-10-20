@@ -1,0 +1,26 @@
+{
+  "name": "Titan Nova",
+  "type": "extension",
+  "version": "3.0.0",
+  "description": "Autonomous agent-driven task creation, scheduling, channel execution and analytics engine for launching and operating new business verticals.",
+  "provider": "App\\Extensions\\TitanNova\\System\\TitanNovaServiceProvider",
+  "register_key": "titan-nova",
+  "folder": "TitanNova",
+  "namespace": "App\\Extensions\\TitanNova",
+  "tables": [
+    "ext_titan_nova_agents",
+    "ext_titan_nova_tasks"
+  ],
+  "concepts": {
+    "agent": "agent",
+    "task": "task",
+    "planning_horizon": "task duration and future schedule coverage",
+    "task_creation": "task creation",
+    "scheduled_execution": "scheduled tasks",
+    "task_type": "task type",
+    "calendar": "schedule",
+    "analytics": "analytics",
+    "creation_wizard": "task engine",
+    "channel": "generic execution and delivery channel"
+  }
+}

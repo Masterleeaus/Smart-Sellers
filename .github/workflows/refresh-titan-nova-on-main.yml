@@ -1,0 +1,269 @@
+name: Refresh Titan Nova on current main
+
+on:
+  push:
+    branches:
+      - feature/titan-nova-main-refresh
+    paths:
+      - .github/workflows/refresh-titan-nova-on-main.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: titan-nova-main-refresh
+  cancel-in-progress: false
+
+jobs:
+  replay-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out refreshed branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/titan-nova-main-refresh
+          fetch-depth: 0
+
+      - name: Replay isolated Titan Nova source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/titan-nova-replay
+          mkdir -p /tmp/titan-nova-replay
+          git fetch origin feature/titan-nova-integrated-build --depth=1
+          git archive FETCH_HEAD \
+            app/extensions/TitanNova \
+            app/extensions/Chatbot/resources/titan-apps/TemplateSchemas/titan-nova-operator.json \
+            docs/superpowers/plans/2026-08-05-titan-nova-integrated-build.md \
+            docs/titan-nova/INTEGRATION-BOUNDARIES.md \
+            scripts/build_titan_nova_integrated.py \
+            | tar -x -C /tmp/titan-nova-replay
+          cp -a /tmp/titan-nova-replay/. ./
+
+      - name: Register Titan Nova and correct the shared PWA template
+        shell: python
+        run: |
+          from __future__ import annotations
+
+          import json
+          from pathlib import Path
+
+          provider_path = Path('app/Domains/Marketplace/MarketplaceServiceProvider.php')
+          provider = provider_path.read_text(encoding='utf-8')
+
+          import_line = 'use App\\Extensions\\TitanNova\\System\\TitanNovaServiceProvider;'
+          if import_line not in provider:
+              marker = 'use App\\Extensions\\UGCCreator\\System\\UGCCreatorServiceProvider;'
+              if marker not in provider:
+                  raise SystemExit('Could not locate Marketplace provider import insertion point')
+              provider = provider.replace(marker, import_line + '\n' + marker, 1)
+
+          registry_line = "        'titan-nova'                   => TitanNovaServiceProvider::class,"
+          if registry_line not in provider:
+              marker = "        'ugc-factory'                   => UGCFactoryServiceProvider::class,"
+              if marker not in provider:
+                  raise SystemExit('Could not locate Marketplace provider registry insertion point')
+              provider = provider.replace(marker, registry_line + '\n' + marker, 1)
+
+          provider_path.write_text(provider, encoding='utf-8')
+
+          config_path = Path(
+              'app/extensions/Chatbot/resources/titan-apps/'
+              'TitanSuiteTemplates/titan-nova/config.json'
+          )
+          config = json.loads(config_path.read_text(encoding='utf-8'))
+          config.update({
+              'name': 'Titan Nova',
+              'slug': 'titan-nova',
+              'type': 'venture-builder',
+              'version': '3.0.0',
+              'description': (
+                  'Evidence-led venture discovery, vertical design, simulation, '
+                  'pilot launch and continuous improvement for Titan Zero.'
+              ),
+              'icon': '🧬',
+              'color': '#6d5dfc',
+              'theme': {
+                  'primary': '#6d5dfc',
+                  'gradient': 'linear-gradient(135deg, #6d5dfc, #4338ca)',
+              },
+              'wizard_steps': [
+                  'Discover',
+                  'Model',
+                  'Simulate',
+                  'Validate',
+                  'Launch',
+                  'Learn',
+              ],
+              'features': [
+                  'opportunity-discovery',
+                  'capability-isomorphism',
+                  'idle-capacity-arbitrage',
+                  'vertical-genome',
+                  'workcore-simulation',
+                  'monte-carlo-simulation',
+                  'offer-design',
+                  'unit-economics',
+                  'anchor-account-validation',
+                  'pilot-mission-control',
+                  'curriculum-compilation',
+                  'capability-passports',
+                  'mission-ledger',
+                  'model-council-gates',
+                  'living-genome',
+              ],
+              'chatbot': {
+                  'name': 'Titan Nova Operator',
+                  'role': 'Venture discovery, validation and launch orchestrator',
+                  'system_prompt': (
+                      'You are the Titan Nova Operator. Turn evidence, business '
+                      'capabilities and market constraints into governed venture '
+                      'experiments. Preserve WorkCore as the operational system of '
+                      'record, require approval for consequential actions, record '
+                      'receipts, and clearly separate hypotheses from verified facts.'
+                  ),
+                  'suggested_prompts': [
+                      'Find the strongest adjacent opportunity',
+                      'Build a vertical launch genome',
+                      'Simulate this business model',
+                      'Design an anchor-customer pilot',
+                      'Compile the training pathway',
+                      'Show the next governed mission',
+                  ],
+              },
+              'tier1_manager': 'VentureLaunchManager',
+              'tier2_specialists': [
+                  'OpportunityResearchSpecialist',
+                  'VerticalGenomeSpecialist',
+                  'VentureSimulationSpecialist',
+                  'PilotLaunchSpecialist',
+              ],
+              'tier3_actions': [
+                  'CollectEvidenceAgent',
+                  'ScoreOpportunityAgent',
+                  'CompileVerticalGenomeAgent',
+                  'RunVentureSimulationAgent',
+                  'CreateAnchorAccountMissionAgent',
+                  'CreatePilotMissionAgent',
+                  'RecordMissionReceiptAgent',
+                  'UpdateLivingGenomeAgent',
+              ],
+              'database': {
+                  'tables': [
+                      'ext_titan_nova_agents',
+                      'ext_titan_nova_tasks',
+                  ],
+                  'authority': (
+                      'Titan Nova owns venture hypotheses, experiments, missions and '
+                      'learning. WorkCore owns customers, bookings, jobs, workforce, '
+                      'invoices, payments and operational records.'
+                  ),
+              },
+              'permissions': [
+                  'titan-nova:view',
+                  'titan-nova:create-mission',
+                  'titan-nova:simulate',
+                  'titan-nova:approve',
+                  'titan-nova:execute',
+                  'titan-nova:view-receipts',
+                  'titan-nova:update-genome',
+              ],
+              'models': [
+                  'TitanNovaAgent',
+                  'TitanNovaTask',
+              ],
+              'settings': {
+                  'approval_required_for_external_actions': True,
+                  'workcore_is_operational_authority': True,
+                  'record_action_receipts': True,
+                  'simulation_before_launch': True,
+                  'minimum_anchor_accounts': 1,
+              },
+          })
+          config_path.write_text(
+              json.dumps(config, indent=2, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+
+          pubspecs = sorted(
+              str(path.as_posix())
+              for path in Path('.').rglob('pubspec.yaml')
+              if '.git' not in path.parts
+          )
+          inventory_path = Path('docs/titan-nova/flutter-app-inventory.json')
+          inventory_path.parent.mkdir(parents=True, exist_ok=True)
+          inventory = {
+              'workspace': 'mobile apps',
+              'workspace_present': Path('mobile apps').is_dir(),
+              'flutter_projects': pubspecs,
+              'pubspec_count': len(pubspecs),
+              'status': 'available' if pubspecs else 'blocked',
+              'reason': (
+                  'Flutter project source is present.' if pubspecs else
+                  'The mobile apps workspace exists, but no pubspec.yaml is committed.'
+              ),
+          }
+          inventory_path.write_text(
+              json.dumps(inventory, indent=2) + '\n',
+              encoding='utf-8',
+          )
+
+          refresh_doc = Path('docs/titan-nova/MAIN-REFRESH.md')
+          refresh_doc.write_text(
+              '# Titan Nova Main Refresh\n\n'
+              'This branch is based on the current `main` branch and replays only the '
+              'isolated Titan Nova extension, operator template, plan and integration '
+              'boundary files from `feature/titan-nova-integrated-build`.\n\n'
+              '## Conflict policy\n\n'
+              '- Current `main` remains authoritative for shared WorkCore, Chatbot, '
+              'security and multi-tenant architecture.\n'
+              '- The old broad `TemplateSchemas/index.json` edits are not replayed.\n'
+              '- The current native Titan suite template is corrected in place.\n'
+              '- The mobile workspace is inventoried from committed source; no Flutter '
+              'app is fabricated when `pubspec.yaml` is absent.\n'
+              '- WorkCore remains authoritative for operational records.\n',
+              encoding='utf-8',
+          )
+
+      - name: Verify replayed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool app/extensions/TitanNova/extension.json >/dev/null
+          python -m json.tool app/extensions/Chatbot/resources/titan-apps/TitanSuiteTemplates/titan-nova/config.json >/dev/null
+          python -m json.tool app/extensions/Chatbot/resources/titan-apps/TemplateSchemas/titan-nova-operator.json >/dev/null
+          python -m json.tool docs/titan-nova/flutter-app-inventory.json >/dev/null
+
+          while IFS= read -r -d '' file; do
+            php -l "$file" >/dev/null
+          done < <(find app/extensions/TitanNova -type f -name '*.php' -print0)
+
+          php app/extensions/TitanNova/tests/titan_nova_verify.php
+          grep -Fq 'TitanNovaServiceProvider' app/Domains/Marketplace/MarketplaceServiceProvider.php
+          ! grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' \
+            app/extensions/TitanNova \
+            docs/titan-nova \
+            app/extensions/Chatbot/resources/titan-apps/TitanSuiteTemplates/titan-nova/config.json
+          git diff --check
+
+      - name: Commit refreshed integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            app/extensions/TitanNova \
+            app/Domains/Marketplace/MarketplaceServiceProvider.php \
+            app/extensions/Chatbot/resources/titan-apps/TemplateSchemas/titan-nova-operator.json \
+            app/extensions/Chatbot/resources/titan-apps/TitanSuiteTemplates/titan-nova/config.json \
+            docs/superpowers/plans/2026-08-05-titan-nova-integrated-build.md \
+            docs/titan-nova \
+            scripts/build_titan_nova_integrated.py
+          if git diff --cached --quiet; then
+            echo 'No replay changes were required.'
+            exit 0
+          fi
+          git commit -m 'feat(titan-nova): refresh integrated build on current main'
+          git push origin HEAD:feature/titan-nova-main-refresh

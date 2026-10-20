@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0.0",
+  "identity": {
+    "name": "Titan Nova Operator",
+    "slug": "titan-nova-operator",
+    "icon": "nova",
+    "accent": "var(--lqd-ext-chat-primary)"
+  },
+  "navigation": {
+    "default_view": "inbox",
+    "primary": [
+      {
+        "id": "inbox",
+        "label": "Inbox",
+        "icon": "messages",
+        "offline": true
+      },
+      {
+        "id": "bookings",
+        "label": "Bookings",
+        "icon": "bookings",
+        "offline": true
+      },
+      {
+        "id": "missions",
+        "label": "Missions",
+        "icon": "operations",
+        "offline": true
+      },
+      {
+        "id": "approvals",
+        "label": "Approvals",
+        "icon": "approvals",
+        "offline": true
+      }
+    ],
+    "drawer": [
+      {
+        "id": "leads",
+        "label": "Leads",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "conversations",
+        "label": "Conversations",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "tasks",
+        "label": "Tasks",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "ventures",
+        "label": "Ventures",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "pilots",
+        "label": "Pilots",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "training",
+        "label": "Training",
+        "icon": "chevron-right",
+        "offline": true
+      },
+      {
+        "id": "payments",
+        "label": "Payments",
+        "icon": "chevron-right",
+        "offline": false
+      },
+      {
+        "id": "analytics",
+        "label": "Analytics",
+        "icon": "chevron-right",
+        "offline": false
+      }
+    ],
+    "header_actions": [
+      "sync",
+      "notifications",
+      "settings"
+    ]
+  },
+  "home": {
+    "widgets": [
+      "reply_queue",
+      "today_bookings",
+      "mission_attention",
+      "pending_approvals"
+    ],
+    "quick_actions": [
+      "reply",
+      "create_task",
+      "open_booking"
+    ]
+  },
+  "chat": {
+    "persistent": true,
+    "role": "Titan Nova Operator",
+    "suggested_prompts": [
+      "Show replies needing attention",
+      "What bookings changed today?",
+      "Summarise active launch missions"
+    ],
+    "context_policy": {
+      "minimum_scope": true,
+      "send_full_record": false,
+      "requires_permission": true
+    }
+  },
+  "workcore": {
+    "domains": [
+      "CRM",
+      "Operations",
+      "Scheduling",
+      "Finance",
+      "Workforce",
+      "Compliance",
+      "Analytics"
+    ],
+    "commands": [
+      "conversation.reply",
+      "booking.read",
+      "booking.reschedule",
+      "task.complete",
+      "approval.decide",
+      "lead.promote"
+    ],
+    "read_models": [
+      "reply_queue",
+      "bookings",
+      "missions",
+      "tasks",
+      "approvals",
+      "venture_health"
+    ]
+  },
+  "offline": {
+    "records": [
+      "reply_queue",
+      "bookings",
+      "missions",
+      "tasks",
+      "approvals"
+    ],
+    "packs": [
+      "titan-nova-operator-default"
+    ],
+    "retention": {
+      "completed_days": 30
+    },
+    "conflict_rules": {
+      "server_authoritative": true,
+      "preserve_local_copy": true
+    }
+  },
+  "permissions": [
+    "conversation.reply",
+    "booking.read",
+    "booking.reschedule",
+    "task.complete",
+    "approval.decide",
+    "lead.promote"
+  ],
+  "privacy": {
+    "default_mode": "device-first",
+    "redact_before_cloud": true,
+    "attachment_confirmation": true,
+    "provider_allowlist": []
+  },
+  "notifications": [
+    "new_reply",
+    "booking_change",
+    "task_assignment",
+    "approval",
+    "sync_failure",
+    "conflict"
+  ],
+  "settings_sections": [
+    "ai-providers",
+    "privacy",
+    "device-security",
+    "offline-sync",
+    "workcore",
+    "permissions",
+    "notifications",
+    "channels",
+    "appearance",
+    "accessibility",
+    "diagnostics"
+  ],
+  "preview_states": [
+    "mobile",
+    "tablet",
+    "desktop",
+    "drawer-open",
+    "settings-open",
+    "offline",
+    "syncing",
+    "conflict",
+    "empty",
+    "populated"
+  ]
+}
