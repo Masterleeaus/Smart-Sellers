@@ -2,6 +2,7 @@
 
 namespace App\Extensions\Chatbot\System\Services;
 
+use App\Contracts\LoggerContract;
 use App\Extensions\Chatbot\System\Models\Chatbot;
 use App\Extensions\Chatbot\System\Models\ChatbotAvatar;
 use App\Extensions\Chatbot\System\Models\ChatbotConversation;
@@ -12,9 +13,14 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HigherOrderWhenProxy;
+use Throwable;
 
 class ChatbotService
 {
+    public function __construct(private readonly LoggerContract $logger)
+    {
+    }
+
     public function agentConversations(array $chatbots, ?string $orderBy = null): Collection|array
     {
         $agentFilter = filter_var(request()?->get('agentFilter', false), FILTER_VALIDATE_BOOLEAN);
@@ -316,13 +322,31 @@ class ChatbotService
 
     public function update($model, array $data): Model
     {
-        if (is_numeric($model)) {
-            $model = $this->query()->findOrFail($model);
+        try {
+            if (is_numeric($model)) {
+                $model = $this->query()->findOrFail($model);
+            }
+
+            $chatbotId = $model->getAttribute('id');
+
+            $model->update($data);
+
+            $this->logger->info('Chatbot updated successfully', [
+                'chatbot_id' => $chatbotId,
+                'updated_fields' => array_keys($data),
+                'user_id' => Auth::id(),
+            ]);
+
+            return $model;
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to update chatbot', [
+                'model_id' => is_numeric($model) ? $model : ($model->getAttribute('id') ?? 'unknown'),
+                'fields' => array_keys($data),
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+            throw $e;
         }
-
-        $model->update($data);
-
-        return $model;
     }
 
     public function avatars(): Collection|array

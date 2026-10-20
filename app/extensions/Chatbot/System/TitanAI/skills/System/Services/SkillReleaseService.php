@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Extensions\SystemAIChatSkills\System\Services;
 
+use App\Contracts\LoggerContract;
 use App\Extensions\SystemAIChatSkills\System\Models\Skill;
 use App\Extensions\SystemAIChatSkills\System\Models\SkillVersion;
 use App\Extensions\SystemAIChatSkills\System\Packages\SkillPackageFingerprint;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
+use Throwable;
 
 final class SkillReleaseService
 {
@@ -27,77 +29,112 @@ final class SkillReleaseService
         private readonly SkillPackageHasher $packageHasher,
         private readonly SkillPackageVerifier $packageVerifier,
         private readonly SkillResourceScanner $resourceScanner,
+        private readonly LoggerContract $logger,
     ) {
     }
 
     public function createInitialPublishedRelease(Skill $skill): SkillVersion
     {
-        if ($skill->versions()->exists()) {
-            return $skill->versions()->oldest('id')->firstOrFail();
-        }
+        try {
+            if ($skill->versions()->exists()) {
+                $existingVersion = $skill->versions()->oldest('id')->firstOrFail();
+                $this->logger->debug('Skill version already exists', [
+                    'skill_id' => $skill->getAttribute('id'),
+                    'skill_name' => $skill->getAttribute('name'),
+                    'version_id' => $existingVersion->getAttribute('id'),
+                ]);
+                return $existingVersion;
+            }
 
-        $resources = $this->scanSkillResources($skill);
-        $fingerprint = $this->fingerprintPayload([
-            'version' => $skill->version ?: '1.0.0',
-            'name' => $skill->name,
-            'description' => $skill->description,
-            'instructions' => $skill->instructions,
-            'bundled_resources' => $skill->bundled_resources,
-            'metadata' => $skill->metadata,
-        ], $resources);
-        $provenance = $this->provenanceFromMetadata($skill->metadata, $skill);
-        $integrity = $this->initialIntegrityDecision($skill, $fingerprint);
-
-        return DB::transaction(function () use ($skill, $resources, $fingerprint, $provenance, $integrity): SkillVersion {
-            $version = $skill->versions()->create([
+            $this->logger->info('Creating initial skill release', [
+                'skill_id' => $skill->getAttribute('id'),
+                'skill_name' => $skill->getAttribute('name'),
                 'version' => $skill->version ?: '1.0.0',
-                'lifecycle_status' => $integrity['status'] === SkillPackageVerificationStatus::VERIFIED
-                    ? SkillVersionStatus::PUBLISHED
-                    : SkillVersionStatus::QUARANTINED,
+            ]);
+
+            $resources = $this->scanSkillResources($skill);
+            $fingerprint = $this->fingerprintPayload([
+                'version' => $skill->version ?: '1.0.0',
                 'name' => $skill->name,
                 'description' => $skill->description,
                 'instructions' => $skill->instructions,
                 'bundled_resources' => $skill->bundled_resources,
                 'metadata' => $skill->metadata,
-                'content_hash' => $fingerprint->packageHash,
-                'package_hash' => $fingerprint->packageHash,
-                'manifest_hash' => $fingerprint->manifestHash,
-                'instructions_hash' => $fingerprint->instructionsHash,
-                'source' => $skill->source,
-                'source_url' => $skill->source_url,
-                'source_repository' => $provenance['source_repository'],
-                'source_branch' => $provenance['source_branch'],
-                'source_commit_sha' => $provenance['source_commit_sha'],
-                'imported_at' => $provenance['imported_at'],
-                'imported_by' => $provenance['imported_by'],
-                'verification_status' => $integrity['status'],
-                'verification_details' => $integrity['details'],
-                'verified_at' => now(),
-                'release_notes' => 'Initial release.',
-                'created_by' => $skill->created_by ?? $skill->user_id,
-                'published_by' => $skill->managed_by ?? $skill->created_by ?? $skill->user_id,
-                'published_at' => now(),
-            ]);
+            ], $resources);
+            $provenance = $this->provenanceFromMetadata($skill->metadata, $skill);
+            $integrity = $this->initialIntegrityDecision($skill, $fingerprint);
 
-            $this->persistResources($version, $resources);
-            $this->activateVersion(
-                $skill,
-                $version,
-                $integrity['status'] === SkillPackageVerificationStatus::VERIFIED,
-            );
+            return DB::transaction(function () use ($skill, $resources, $fingerprint, $provenance, $integrity): SkillVersion {
+                $version = $skill->versions()->create([
+                    'version' => $skill->version ?: '1.0.0',
+                    'lifecycle_status' => $integrity['status'] === SkillPackageVerificationStatus::VERIFIED
+                        ? SkillVersionStatus::PUBLISHED
+                        : SkillVersionStatus::QUARANTINED,
+                    'name' => $skill->name,
+                    'description' => $skill->description,
+                    'instructions' => $skill->instructions,
+                    'bundled_resources' => $skill->bundled_resources,
+                    'metadata' => $skill->metadata,
+                    'content_hash' => $fingerprint->packageHash,
+                    'package_hash' => $fingerprint->packageHash,
+                    'manifest_hash' => $fingerprint->manifestHash,
+                    'instructions_hash' => $fingerprint->instructionsHash,
+                    'source' => $skill->source,
+                    'source_url' => $skill->source_url,
+                    'source_repository' => $provenance['source_repository'],
+                    'source_branch' => $provenance['source_branch'],
+                    'source_commit_sha' => $provenance['source_commit_sha'],
+                    'imported_at' => $provenance['imported_at'],
+                    'imported_by' => $provenance['imported_by'],
+                    'verification_status' => $integrity['status'],
+                    'verification_details' => $integrity['details'],
+                    'verified_at' => now(),
+                    'release_notes' => 'Initial release.',
+                    'created_by' => $skill->created_by ?? $skill->user_id,
+                    'published_by' => $skill->managed_by ?? $skill->created_by ?? $skill->user_id,
+                    'published_at' => now(),
+                ]);
 
-            if ($integrity['status'] !== SkillPackageVerificationStatus::VERIFIED) {
-                Skill::withoutEvents(function () use ($skill, $integrity): void {
-                    $skill->forceFill([
-                        'status' => 'inactive',
+                $this->persistResources($version, $resources);
+                $this->activateVersion(
+                    $skill,
+                    $version,
+                    $integrity['status'] === SkillPackageVerificationStatus::VERIFIED,
+                );
+
+                if ($integrity['status'] !== SkillPackageVerificationStatus::VERIFIED) {
+                    Skill::withoutEvents(function () use ($skill, $integrity): void {
+                        $skill->forceFill([
+                            'status' => 'inactive',
+                            'verification_status' => $integrity['status'],
+                            'latest_published_version_id' => null,
+                        ])->save();
+                    });
+
+                    $this->logger->warning('Skill release quarantined due to verification failure', [
+                        'skill_id' => $skill->getAttribute('id'),
+                        'version_id' => $version->getAttribute('id'),
                         'verification_status' => $integrity['status'],
-                        'latest_published_version_id' => null,
-                    ])->save();
-                });
-            }
+                    ]);
+                } else {
+                    $this->logger->info('Skill release published successfully', [
+                        'skill_id' => $skill->getAttribute('id'),
+                        'version_id' => $version->getAttribute('id'),
+                        'version' => $version->getAttribute('version'),
+                    ]);
+                }
 
-            return $version->fresh(['resources']);
-        });
+                return $version->fresh(['resources']);
+            });
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to create initial skill release', [
+                'skill_id' => $skill->getAttribute('id'),
+                'skill_name' => $skill->getAttribute('name'),
+                'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+            ]);
+            throw $e;
+        }
     }
 
     public function createDraft(Skill $skill, ?int $actorId, ?SkillVersion $baseVersion = null, ?string $version = null): SkillVersion
