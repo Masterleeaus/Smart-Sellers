@@ -242,7 +242,7 @@ class AIAgentServiceProvider extends ServiceProvider implements UninstallExtensi
 
     private function registerRoutes(): static
     {
-        // ── Webhook routes (no auth) ──────────────────────────────────────────
+        // ── Webhook routes (no auth, but signature verified) ────────────────────
         $this->router()
             ->group([
                 'middleware' => 'api',
@@ -252,7 +252,8 @@ class AIAgentServiceProvider extends ServiceProvider implements UninstallExtensi
                 $router->post('telegram/{channel}/webhook', [TelegramWebhookController::class, 'handle'])
                     ->name('telegram.webhook');
 
-                $router->post('webhook/{uuid}', [GenericWebhookController::class, 'handle'])
+                // Generic webhook - resolves by public ID, requires signature verification
+                $router->post('webhook/{publicId}', [GenericWebhookController::class, 'handle'])
                     ->name('webhook');
             });
 

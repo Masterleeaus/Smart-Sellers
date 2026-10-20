@@ -18,6 +18,10 @@ class AIAgentWorkflow extends Model
 
     protected $fillable = [
         'user_id',
+        'webhook_public_id',
+        'tenant_id',
+        'webhook_secret_ref',
+        'webhook_nonces',
         'name',
         'description',
         'role',
@@ -34,13 +38,14 @@ class AIAgentWorkflow extends Model
     protected $appends = ['avatar_url'];
 
     protected $casts = [
-        'status'         => WorkflowStatusEnum::class,
-        'trigger_type'   => TriggerTypeEnum::class,
-        'trigger_config' => 'array',
-        'actions'        => 'array',
-        'steps'          => 'array',
-        'last_run_at'    => 'datetime',
-        'next_run_at'    => 'datetime',
+        'status'           => WorkflowStatusEnum::class,
+        'trigger_type'     => TriggerTypeEnum::class,
+        'trigger_config'   => 'array',
+        'actions'          => 'array',
+        'steps'            => 'array',
+        'webhook_nonces'   => 'array',
+        'last_run_at'      => 'datetime',
+        'next_run_at'      => 'datetime',
     ];
 
     public function getAvatarUrlAttribute(): ?string
