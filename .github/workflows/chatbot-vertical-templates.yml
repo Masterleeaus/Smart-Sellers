@@ -1,0 +1,80 @@
+name: Chatbot Vertical Template Verification
+
+on:
+  pull_request:
+    paths:
+      - 'app/extensions/Chatbot/**'
+      - '.github/workflows/chatbot-vertical-templates.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/extensions/Chatbot/**'
+      - '.github/workflows/chatbot-vertical-templates.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatbot-vertical-templates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Python test runner
+        run: python3 -m pip install --disable-pip-version-check pytest
+
+      - name: Validate vertical and workspace catalogues
+        run: |
+          python3 -m pytest \
+            app/extensions/Chatbot/tests/architecture/test_vertical_template_catalogue.py \
+            app/extensions/Chatbot/tests/architecture/test_vertical_builder_composition.py \
+            -q
+
+      - name: Run shell builder Node regression test
+        working-directory: app/extensions/Chatbot
+        run: node tests/js/titan-shell-builder.test.js
+
+      - name: Verify published shell runtime matches source
+        run: cmp app/extensions/Chatbot/resources/js/titan-shell-builder.js app/extensions/Chatbot/public/vendor/chatbot/js/titan-shell-builder.js
+
+      - name: Validate template catalogue JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('app/extensions/Chatbot/resources/titan-apps/TemplateCatalogues')
+          paths = sorted(root.glob('*.json'))
+          assert paths, 'no template catalogues found'
+          for path in paths:
+              json.loads(path.read_text(encoding='utf-8'))
+          print(f'validated {len(paths)} template catalogue files')
+          PY
+
+      - name: PHP syntax checks
+        run: |
+          php -l app/extensions/Chatbot/System/Http/Requests/ChatbotStoreRequest.php
+          php -l app/extensions/Chatbot/System/Http/Requests/ChatbotCustomizeRequest.php
+          php -l app/extensions/Chatbot/System/Titan/TitanRegistry.php
+          php -l app/extensions/Chatbot/System/TitanShell/TemplateSchema.php
+          php -l app/extensions/Chatbot/System/Http/Controllers/Api/TitanController.php
+          php -l app/extensions/Chatbot/tests/Feature/TitanShell/TitanShellBuilderContractTest.php
+
+      - name: Reject merge markers in active shell files
+        run: |
+          ! grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' \
+            app/extensions/Chatbot/System/Titan \
+            app/extensions/Chatbot/System/TitanShell \
+            app/extensions/Chatbot/System/Http/Controllers/Api/TitanController.php \
+            app/extensions/Chatbot/resources/titan-apps/TemplateCatalogues \
+            app/extensions/Chatbot/resources/views/home/edit-window/edit-steps/titan-shell-builder.blade.php
+
+      - name: Diff hygiene
+        run: git diff --check origin/main...HEAD
